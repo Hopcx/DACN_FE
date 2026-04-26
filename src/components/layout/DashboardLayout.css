@@ -1,0 +1,89 @@
+.dashboard-shell {
+  min-height: 100vh;
+  display: flex;
+  background: #f4f5f7;
+}
+
+.dashboard-sidebar {
+  width: 270px;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  padding: 18px 14px;
+  box-sizing: border-box;
+}
+
+.dashboard-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.dashboard-logo-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #0ea5e9;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.dashboard-sidebar__brand-name {
+  font-weight: 700;
+  color: #111827;
+}
+
+.dashboard-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dashboard-nav__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: #111827;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.dashboard-nav__item:hover {
+  background: #f3f4f6;
+}
+
+.dashboard-nav__item.is-active {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.dashboard-nav__icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #111827;
+}
+
+.dashboard-nav__item.is-active .dashboard-nav__icon {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.dashboard-nav__label {
+  white-space: nowrap;
+}
+
+.dashboard-main {
+  flex: 1;
+  padding: 24px 22px 40px;
+}
