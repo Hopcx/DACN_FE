@@ -239,3 +239,11 @@
     grid-template-columns: 1fr;
   }
 }
+
+.auth-error {
+  color: #b91c1c;
+  background: #fef2f2;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+}

@@ -8,6 +8,7 @@ import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import SelectRolePage from './pages/auth/SelectRolePage'
 import AdminDashboardPage from './pages/dashboard/AdminDashboardPage'
+import RequireAuth from './components/auth/RequireAuth'
 
 export default function App() {
   return (
@@ -22,8 +23,10 @@ export default function App() {
         <Route path="register/role" element={<SelectRolePage />} />
       </Route>
 
-      <Route path="admin" element={<DashboardLayout />}>
-        <Route path="dashboard" element={<AdminDashboardPage />} />
+      <Route element={<RequireAuth />}>
+        <Route path="admin" element={<DashboardLayout />}>
+          <Route path="dashboard" element={<AdminDashboardPage />} />
+        </Route>
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />

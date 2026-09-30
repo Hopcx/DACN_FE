@@ -3,17 +3,30 @@ import { Link, useNavigate } from 'react-router-dom'
 import { APP_NAME, ROUTES } from '../../data/constants'
 import Button from '../../components/ui/Button'
 import './auth.css'
+import { login } from '../../services/authService'
+import { getApiError } from '../../api/response'
 
 export default function LoginPage() {
   const navigate = useNavigate()
 
   const [emailOrPhone, setEmailOrPhone] = useState('')
   const [password, setPassword] = useState('')
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState('')
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
-    // Placeholder: sau này gọi API /auth/login
-    navigate(ROUTES.adminDashboard, { state: { role: 'Đăng nhập' } })
+    if (pending) return
+    setPending(true)
+    setError('')
+    try {
+      await login(emailOrPhone.trim(), password)
+      navigate(ROUTES.adminDashboard, { replace: true })
+    } catch (failure) {
+      setError(getApiError(failure))
+    } finally {
+      setPending(false)
+    }
   }
 
   return (
@@ -30,6 +43,7 @@ export default function LoginPage() {
         <p className="auth-subheading">Nhập thông tin để tiếp tục</p>
 
         <form onSubmit={handleSubmit}>
+          {error && <p className="auth-error" role="alert">{error}</p>}
           <div className="auth-field">
             <label className="auth-label">Email/ Số điện thoại</label>
             <input
@@ -65,8 +79,8 @@ export default function LoginPage() {
           </div>
 
           <div className="auth-actions">
-            <Button type="submit" variant="primary" className="auth-submit">
-              ĐĂNG NHẬP
+            <Button type="submit" variant="primary" className="auth-submit" disabled={pending}>
+              {pending ? 'ĐANG ĐĂNG NHẬP...' : 'ĐĂNG NHẬP'}
             </Button>
 
             <Link
@@ -93,4 +107,3 @@ export default function LoginPage() {
     </section>
   )
 }
-
