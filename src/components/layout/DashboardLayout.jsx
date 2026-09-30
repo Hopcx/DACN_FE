@@ -1,8 +1,11 @@
-import { Link, Outlet, useLocation } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { logout } from '../../services/authService'
+import { ROUTES } from '../../data/constants'
 import './DashboardLayout.css'
 
 export default function DashboardLayout() {
   const location = useLocation()
+  const navigate = useNavigate()
 
   const navItems = [
     { to: '/admin/dashboard', label: 'Trang chủ', icon: 'H' },
@@ -45,6 +48,9 @@ export default function DashboardLayout() {
             )
           })}
         </nav>
+        <button type="button" className="dashboard-logout" onClick={() => { logout(); navigate(ROUTES.login, { replace: true }) }}>
+          Đăng xuất
+        </button>
       </aside>
 
       <div className="dashboard-main">
