@@ -4,17 +4,37 @@ import { clearSession, updateTokens } from '../redux/slices/authSlice'
 import { readPayload } from './response'
 
 const axiosClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/web',
+  baseURL: '/web',
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
 let refreshPromise = null
+let csrfPromise = null
+let csrfToken = null
 
-axiosClient.interceptors.request.use((config) => {
+async function ensureCsrfToken() {
+  if (csrfToken) return csrfToken
+  if (!csrfPromise) {
+    csrfPromise = axios.get(`${axiosClient.defaults.baseURL}/auth/csrf`, { withCredentials: true })
+      .then((response) => {
+        const token = readPayload(response)?.csrfToken
+        if (!token) throw new Error('Không thể khởi tạo CSRF token.')
+        csrfToken = token
+        return token
+      }).finally(() => { csrfPromise = null })
+  }
+  return csrfPromise
+}
+
+axiosClient.interceptors.request.use(async (config) => {
   const token = store.getState().auth.accessToken
   if (token && !config.skipAuth) config.headers.Authorization = `Bearer ${token}`
+  if (config.method?.toLowerCase() === 'post' && config.url?.startsWith('/auth/')) {
+    config.headers['X-CSRF-TOKEN'] = await ensureCsrfToken()
+  }
   return config
 })
 
@@ -27,7 +47,7 @@ axiosClient.interceptors.response.use(
     }
 
     const session = store.getState().auth
-    if (!session.refreshToken) {
+    if (!session.accessToken) {
       store.dispatch(clearSession())
       return Promise.reject(error)
     }
@@ -40,18 +60,18 @@ axiosClient.interceptors.response.use(
     }
 
     if (!refreshPromise) {
-      const refreshToken = session.refreshToken
-      refreshPromise = axiosClient.post('/auth/refresh', { refreshToken }, { skipAuth: true })
+      const oldAccessToken = session.accessToken
+      refreshPromise = axiosClient.post('/auth/refresh', {}, { skipAuth: true })
         .then((response) => {
           const data = readPayload(response)
-          if (!data.accessToken || !data.refreshToken) throw new Error('Phản hồi làm mới phiên không hợp lệ.')
+          if (!data.accessToken) throw new Error('Phản hồi làm mới phiên không hợp lệ.')
           // A later login/logout must not be overwritten by an old refresh response.
-          if (store.getState().auth.refreshToken !== refreshToken) throw new Error('Phiên đã thay đổi.')
-          store.dispatch(updateTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken }))
+          if (store.getState().auth.accessToken !== oldAccessToken) throw new Error('Phiên đã thay đổi.')
+          store.dispatch(updateTokens({ accessToken: data.accessToken }))
           return data.accessToken
         })
         .catch((refreshError) => {
-          if (store.getState().auth.refreshToken === refreshToken) store.dispatch(clearSession())
+          if (store.getState().auth.accessToken === oldAccessToken) store.dispatch(clearSession())
           throw refreshError
         })
         .finally(() => { refreshPromise = null })

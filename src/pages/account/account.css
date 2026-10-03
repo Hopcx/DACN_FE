@@ -1,0 +1,7 @@
+.account-page { max-width: 760px; margin: 0 auto; color: #111827; }
+.account-form { display: grid; gap: 14px; padding: 22px; margin: 20px 0; background: white; border: 1px solid #e5e7eb; border-radius: 12px; }
+.account-form label { display: grid; gap: 6px; font-weight: 600; }
+.account-form input { padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font: inherit; }
+.account-form button { justify-self: start; padding: 10px 16px; border: 0; border-radius: 8px; background: #1d4ed8; color: white; cursor: pointer; }
+.account-form button:disabled { opacity: .55; cursor: wait; }
+.account-error { color: #b91c1c; }

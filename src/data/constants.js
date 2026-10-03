@@ -6,4 +6,6 @@ export const ROUTES = {
   register: '/auth/register',
   selectRole: '/auth/register/role',
   adminDashboard: '/admin/dashboard',
+  profile: '/admin/profile',
+  users: '/admin/users',
 }
