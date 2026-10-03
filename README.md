@@ -2,9 +2,11 @@
 
 ## Local API integration
 
-The frontend calls `/web/*` through Vite's development proxy. Start `Project.Api` with its `https` launch profile (`https://localhost:7242`), then run `npm run dev` here. The proxy accepts the local development certificate. `VITE_API_BASE_URL` defaults to `/web`; an absolute URL requires API CORS configuration.
+The frontend calls `/web/*` on the same origin through Vite's development proxy. Start `Project.Api` with its `https` launch profile (`https://localhost:7242`), then run `npm run dev` here. The proxy accepts the local API development certificate. The API base path is `/web`.
 
-Login sends `keyword` and `password` to `/web/auth/login`, then verifies `/web/auth/me`. Tokens stay in Redux memory, so reloading the page requires another login. A 401 can trigger one JSON refresh and one request replay; 403 is displayed without retry. The dashboard requests `/web/rooms` only when `me.permissions` includes permission 4. Signing out clears the local session; the current API has no logout endpoint to revoke tokens.
+Auth POSTs first fetch `/web/auth/csrf`, then send `X-CSRF-TOKEN`. Login returns only a short-lived access JWT in JSON; the refresh token is a Secure/HttpOnly/SameSite=Lax cookie scoped to `/web/auth`. Redux keeps the access JWT in memory. After reload, the route guard attempts cookie refresh, then `/web/auth/me`. A 401 can trigger one cookie refresh and one replay; 403 is displayed without retry. Logout calls `/web/auth/logout` to revoke refresh and the current access jti, then clears memory.
+
+Development requires HTTPS on both Vite and the API. Set `DACN_DEV_PFX_PATH` to a local PFX development certificate and `DACN_DEV_PFX_PASSWORD` in your shell; the file is ignored by Git. Start Vite at `https://localhost:5173`, with `/web` proxied to API `https://localhost:7242`. These variables are consumed only by the Vite Node config, not exposed through `import.meta.env`. The API development mail sender writes verification links to ignored `Project.Api/.maildrop/` if no SMTP provider is configured. Production requires `Mail__SmtpHost`, `Mail__SmtpPort`, `Mail__SmtpUser`, `Mail__SmtpPassword`, `Mail__From`, `Mail__PublicFrontendUrl`, and `Security__AllowedOrigins__0` (HTTPS FE origin) in secure environment configuration. Apply/review the auth migration and existing-user email verification plan before enabling new login behavior.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

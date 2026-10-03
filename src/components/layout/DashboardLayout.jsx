@@ -1,11 +1,17 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { logout } from '../../services/authService'
+import { getApiError } from '../../api/response'
 import { ROUTES } from '../../data/constants'
+import { useSelector } from 'react-redux'
 import './DashboardLayout.css'
 
 export default function DashboardLayout() {
   const location = useLocation()
   const navigate = useNavigate()
+  const [logoutError, setLogoutError] = useState('')
+  const [logoutPending, setLogoutPending] = useState(false)
+  const user = useSelector((state) => state.auth.user)
 
   const navItems = [
     { to: '/admin/dashboard', label: 'Trang chủ', icon: 'H' },
@@ -15,6 +21,8 @@ export default function DashboardLayout() {
     { to: '/admin/dashboard', label: 'Bài Thi', icon: 'T' },
     { to: '/admin/dashboard', label: 'Quản lý Môn Học', icon: 'M' },
     { to: '/admin/dashboard', label: 'Lớp học', icon: 'S' },
+    { to: ROUTES.profile, label: 'Hồ sơ của tôi', icon: 'P' },
+    ...(String(user?.levelId) === '1' ? [{ to: ROUTES.users, label: 'Tài khoản', icon: 'U' }] : []),
   ]
 
   return (
@@ -48,7 +56,13 @@ export default function DashboardLayout() {
             )
           })}
         </nav>
-        <button type="button" className="dashboard-logout" onClick={() => { logout(); navigate(ROUTES.login, { replace: true }) }}>
+        {logoutError && <p role="alert" className="account-error">{logoutError}</p>}
+        <button type="button" className="dashboard-logout" disabled={logoutPending} onClick={async () => {
+          setLogoutPending(true); setLogoutError('')
+          try { await logout(); navigate(ROUTES.login, { replace: true }) }
+          catch (error) { setLogoutError(getApiError(error)) }
+          finally { setLogoutPending(false) }
+        }}>
           Đăng xuất
         </button>
       </aside>
