@@ -13,16 +13,25 @@ export default function DashboardLayout() {
   const [logoutPending, setLogoutPending] = useState(false)
   const user = useSelector((state) => state.auth.user)
 
-  const navItems = [
+  const navItems = String(user?.levelId) === '4' ? [
+    { to: ROUTES.myClasses, label: 'Lớp học của tôi', icon: 'S' },
+    { to: ROUTES.profile, label: 'Hồ sơ của tôi', icon: 'P' },
+  ] : [
     { to: '/admin/dashboard', label: 'Trang chủ', icon: 'H' },
     { to: '/admin/dashboard', label: 'Quản lý Lịch Thi', icon: 'L' },
-    { to: '/admin/dashboard', label: 'Quản lý Lớp Học', icon: 'C' },
+    ...(String(user?.levelId) === '1' ? [{ to: ROUTES.classes, label: 'Quản lý Lớp Học', icon: 'C' }] : []),
     { to: '/admin/dashboard', label: 'Quản lý Đề Thi', icon: 'E' },
     { to: '/admin/dashboard', label: 'Bài Thi', icon: 'T' },
-    { to: '/admin/dashboard', label: 'Quản lý Môn Học', icon: 'M' },
-    { to: '/admin/dashboard', label: 'Lớp học', icon: 'S' },
+    ...((user?.permissions || []).some((id) => String(id) === '3') ? [{ to: ROUTES.subjects, label: 'Quản lý Môn Học', icon: 'M' }] : []),
+    ...((user?.permissions || []).some((id) => String(id) === '4') ? [{ to: ROUTES.rooms, label: 'Quản lý Phòng Thi', icon: 'R' }] : []),
+    ...(String(user?.levelId) === '4' ? [{ to: ROUTES.myClasses, label: 'Lớp học của tôi', icon: 'S' }] : []),
     { to: ROUTES.profile, label: 'Hồ sơ của tôi', icon: 'P' },
-    ...(String(user?.levelId) === '1' ? [{ to: ROUTES.users, label: 'Tài khoản', icon: 'U' }] : []),
+    ...(String(user?.levelId) === '1' ? [
+      { to: ROUTES.users, label: 'Tài khoản', icon: 'U' },
+      { to: ROUTES.levels, label: 'Cấp tài khoản', icon: 'V' },
+      { to: ROUTES.permissions, label: 'Quyền', icon: 'Q' },
+      { to: ROUTES.userPermissions, label: 'Gán quyền', icon: 'G' },
+    ] : []),
   ]
 
   return (
