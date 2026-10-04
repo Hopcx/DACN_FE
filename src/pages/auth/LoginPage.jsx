@@ -20,8 +20,8 @@ export default function LoginPage() {
     setPending(true)
     setError('')
     try {
-      await login(emailOrPhone.trim(), password)
-      navigate(ROUTES.adminDashboard, { replace: true })
+      const user = await login(emailOrPhone.trim(), password)
+      navigate(String(user.levelId) === '4' ? ROUTES.myClasses : ROUTES.adminDashboard, { replace: true })
     } catch (failure) {
       setError(getApiError(failure))
     } finally {
