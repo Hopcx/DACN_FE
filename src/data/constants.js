@@ -8,4 +8,11 @@ export const ROUTES = {
   adminDashboard: '/admin/dashboard',
   profile: '/admin/profile',
   users: '/admin/users',
+  levels: '/admin/levels',
+  permissions: '/admin/permissions',
+  userPermissions: '/admin/user-permissions',
+  subjects: '/admin/subjects',
+  rooms: '/admin/rooms',
+  classes: '/admin/classes',
+  myClasses: '/student/classes',
 }

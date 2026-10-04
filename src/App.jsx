@@ -12,6 +12,10 @@ import AdminDashboardPage from './pages/dashboard/AdminDashboardPage'
 import RequireAuth from './components/auth/RequireAuth'
 import ProfilePage from './pages/account/ProfilePage'
 import AdminUsersPage from './pages/account/AdminUsersPage'
+import CatalogPage from './pages/catalog/CatalogPage'
+import UserPermissionsPage from './pages/catalog/UserPermissionsPage'
+import AdminClassesPage from './pages/classes/AdminClassesPage'
+import StudentClassesPage from './pages/classes/StudentClassesPage'
 
 export default function App() {
   return (
@@ -32,6 +36,15 @@ export default function App() {
           <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="users" element={<AdminUsersPage />} />
+          <Route path="levels" element={<CatalogPage kind="levels" />} />
+          <Route path="permissions" element={<CatalogPage kind="permissions" />} />
+          <Route path="user-permissions" element={<UserPermissionsPage />} />
+          <Route path="subjects" element={<CatalogPage kind="subjects" />} />
+          <Route path="rooms" element={<CatalogPage kind="rooms" />} />
+          <Route path="classes" element={<AdminClassesPage />} />
+        </Route>
+        <Route path="student" element={<DashboardLayout />}>
+          <Route path="classes" element={<StudentClassesPage />} />
         </Route>
       </Route>
 

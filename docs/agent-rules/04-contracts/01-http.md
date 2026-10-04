@@ -18,6 +18,18 @@ Bổ sung code/fieldErrors/traceId và chuẩn hóa HTTP theo một change có O
 
 ## HTTP semantics mục tiêu
 
+## Task 05 — thay đổi validation tại `dev/Hop`
+
+`GET /web/users/get-all-users` nhận thêm query tùy chọn `search` (tên, username hoặc email), trim tối đa 100 ký tự; response vẫn là mảng `UserResponseDto` trong envelope, chưa phân trang.
+
+## Task 06 — lớp và thành viên tại `dev/Hop`
+
+`GET /web/classes/options` (AdminManagement) trả `teachers[{id,fullName}]`, `subjects[{id,name}]` đang hoạt động. `GET /web/class-users/by-class/{classId}` (AdminManagement) trả thành viên lớp. `POST /web/class-users` chỉ nhận `status=1` để admin thêm học viên; `PUT /web/class-users/{id}` chỉ duyệt bản ghi đang chờ với cùng classId/userId và `status=1`; `DELETE` xóa thành viên. Các ghi thành viên khóa hàng Class trong giao dịch; trùng cặp hoặc đầy sĩ số trả 409.
+
+`GET /web/student/classes` (level_id=4) chỉ trả lớp của claim user hiện tại, gồm trạng thái thành viên 1=đã duyệt, 2=chờ duyệt. `POST /web/student/classes/join` nhận `{classCode}` và tạo yêu cầu status=2; `DELETE /web/student/classes/{classId}` rời lớp của chính mình. Không nhận userId từ FE cho student flow. `POST/PUT /web/classes` kiểm tên/mã/sức chứa, giáo viên level 3 đang hoạt động, môn học đang hoạt động; mã trùng và sĩ số giảm dưới số đã duyệt trả 409. Không thêm migration. Gán lịch qua ClassExamSchedule giữ nguyên endpoint cũ và chờ Task 09 để xác định Exam–Schedule.
+
+Không có route hoặc schema mới. `GET /web/rooms` trả 400 nếu `page < 1`, `pageSize` ngoài 1..100, capacity âm, khoảng capacity đảo chiều hoặc offset vượt `int.MaxValue`; danh sách sắp theo `Id` tăng dần trước phân trang. `POST/PUT /web/rooms` yêu cầu tên, địa chỉ và sức chứa dương; `DELETE /web/rooms/{id}` trả 409 nếu phòng có lịch thi hoặc bị FK chặn. `POST/PUT /web/subjects` yêu cầu tên. `POST /web/users/create-user` trả 409 nếu tên đăng nhập, email hoặc số điện thoại đã tồn tại và cấp token xác minh email sau khi tạo. `POST/PUT /web/user-permissions` trả 400 nếu user/permission không tồn tại, 409 nếu cặp đã được gán (kiểm trước ở API, chưa có unique DB constraint). `DELETE /web/levels/{id}` chặn ID 1..4; `DELETE /web/permissions/{id}` chặn ID 1..4; PUT cùng ID chặn status khác 1. `DELETE /web/users/delete-user-{id}` chặn tự xóa và xóa admin hoạt động cuối cùng. Các trường hợp chặn trả `ApiResponse.Fail` với HTTP 409, ID user sai trả 400.
+
 200 đọc/update, 201 tạo có Location phù hợp, 204 cho thao tác không body nếu đã đổi contract; 400 invalid, 401 unauthenticated, 403 forbidden, 404 missing, 409 state/concurrency/idempotency conflict, 429 rate limit, 500 unexpected. Không bọc mọi lỗi bằng status 200.
 
 List mới phải validate page/pageSize và sort allowlist; hiện chưa áp dụng đồng nhất. Payload không chứa entity navigation hoặc secret.

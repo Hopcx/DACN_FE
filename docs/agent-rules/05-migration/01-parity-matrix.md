@@ -33,6 +33,32 @@ Mức bằng chứng: **CODE** có logic source đã xem; **DECLARED** mới th�
 
 ## Theo dõi khi triển khai
 
+### Task 06 tại checkout dev/Hop (2026-10-04)
+
+| Feature | Trạng thái | Bằng chứng hiện tại và phần còn thiếu |
+|---|---|---|
+| F07 Classes/membership | IN_PROGRESS | BE thêm `ClassMembershipStore` khóa hàng Class trong giao dịch cho join/duyệt/xóa, kiểm trùng cặp và sĩ số đã duyệt; class create/update kiểm mã, capacity, giảng viên/môn. FE `AdminClassesPage.jsx` và `StudentClassesPage.jsx` gọi API thật; student query chỉ dựa claim. Legacy status 2 chờ duyệt, 1 đã duyệt. Chưa có SQL concurrency E2E, audit dữ liệu trùng cũ hoặc unique index ClassUser; Teacher management vẫn OPEN. |
+| F16 ClassExamSchedule | DEFERRED_TO_TASK09 | Source hiện chỉ có CRUD, không kiểm trùng gán lịch, overlap học viên hoặc quan hệ Exam–Schedule. Chưa nối UI gán lịch; cần Task 09 chốt model/contract trước. |
+
+Task 06 thêm route `/web/classes/options`, `/web/class-users/by-class/{classId}` và `/web/student/classes` (GET), `/join` (POST), `/{classId}` (DELETE). Không thêm migration/schema; endpoint ClassUser POST/PUT nay kiểm invariant và có thể trả 409. Source checkout mới hơn catalogue baseline, nên quyền `[Authorize]` trên Class/ClassUser/ClassExamSchedule và auth cookie Task 04 là căn cứ áp dụng.
+
+Kiểm tra checkout: `dotnet build DACN_Project.sln --no-restore`, `npm run lint`, `npm run build`, `git diff --check` qua. Chưa có SQL Server/account fixture để thực chạy join/approve đồng thời, nên không gắn VERIFIED.
+
+Sai khác tài liệu: `03-database/01-model.md` nói hai DbSet ClassExamSchedule chỉ có ở Testify, nhưng `ProjectDACNDbContext` hiện cũng có `ClassExamSchedules` và `UserExamSchedules` cùng kiểu `ClassExamSchedule`. Cần xử lý trong Task 09 khi chốt mapping lịch; Task 06 không đổi schema này.
+
+### Task 05 tại checkout dev/Hop (2026-10-04)
+
+| Feature | Trạng thái | Bằng chứng hiện tại và phần còn thiếu |
+|---|---|---|
+| F04 Users | IN_PROGRESS | FE `AdminUsersPage.jsx` nối list/detail/create/update/delete với `/web/users`; search gọi query `GET /web/users/get-all-users?search=`. BE đã có GET/PUT detail từ Task 04 và Task 05 thêm email verification khi admin tạo user. Chưa có server paging, import/export và E2E SQL/mail. |
+| F05 Levels/Permissions | IN_PROGRESS | FE `CatalogPage.jsx` dùng `/web/levels`, `/web/permissions`; `UserPermissionsPage.jsx` dùng `/web/user-permissions`. BE bổ sung kiểm tồn tại user/permission và trùng cặp trước create/update, bảo vệ ID hệ thống 1..4. Chưa có unique DB constraint, nên vẫn có race; thay đổi quyền chỉ thể hiện trong JWT cấp mới. Quyền Teacher ngoài Task 05 vẫn OPEN. |
+| F06 Subjects | IN_PROGRESS | FE list/search/detail từ hàng list, create/update/delete qua `/web/subjects`; BE thêm validation tên. Theo quyết định người dùng, giữ `SubjectManagement` cho xóa, không cấm tên trùng. Chưa xác minh DB. |
+| F08 Rooms | IN_PROGRESS | FE CRUD/paging/search qua `/web/rooms`; BE `RoomQueryDto` validate page/pageSize/capacity, controller kiểm range và lịch thi trước xóa, repository OrderBy(Id) trước Skip/Take. Theo quyết định người dùng, không cấm tên trùng. Chưa có SQL E2E. |
+
+Task 05 giữ `/web` và `ApiResponse`; không thêm route hoặc migration. `npm run lint`, `npm run build`, `dotnet build DACN_Project.sln --no-restore` qua tại checkout; build BE còn warning cũ. Chưa đánh dấu VERIFIED vì chưa có DB/account đủ quyền để chạy CRUD end-to-end.
+
+Quyết định người dùng ngày 2026-10-04: giữ hard delete tài khoản của BE, giữ quyền xóa môn theo `SubjectManagement` hiện tại (permission 3), không cấm trùng tên môn/phòng. BE tạo user quản trị nay phát hành email verification token và gửi liên kết như luồng đăng ký; FE có thao tác gửi lại. Chưa xác minh mail/SQL thật.
+
 ### Task 03 tại checkout dev/Hop (2026-10-01)
 
 F01/F08: FE đã nối login → me và danh sách rooms qua `/web`; Redux giữ phiên trong memory, Axios gửi Bearer và refresh JSON một lần khi 401. Dashboard bỏ số thống kê hardcode, chỉ gọi rooms khi claim permission 4 có trong `me`. BE tại `b61d4a0a1b9f24ab17eab2e54bfbc92004acd7c0` đã sửa ProjectHopADO constructor, đăng ký bảy service và có fallback policy; các nhận định B01/B02 và phần "không có FallbackPolicy" của B04 trong audit chỉ đúng với baseline cũ. Phân quyền chi tiết theo resource vẫn chưa được chứng minh đầy đủ. Không có migration/schema hoặc route API mới trong Task 03. `npm run lint`, `npm run build`, `dotnet build DACN_Project.sln` qua; smoke HTTPS không token: me/rooms 401, login body rỗng 400. Chưa có account có permission 4 và SQL được xác minh để đánh dấu E2E VERIFIED. Refresh token hiện vẫn là JSON và BE chưa có logout/revoke endpoint.
