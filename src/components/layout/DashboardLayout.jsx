@@ -22,6 +22,7 @@ export default function DashboardLayout() {
     ...(String(user?.levelId) === '1' ? [{ to: ROUTES.classes, label: 'Quản lý Lớp Học', icon: 'C' }] : []),
     { to: '/admin/dashboard', label: 'Quản lý Đề Thi', icon: 'E' },
     { to: '/admin/dashboard', label: 'Bài Thi', icon: 'T' },
+    ...((user?.permissions || []).some((id) => String(id) === '2') ? [{ to: ROUTES.questions, label: 'Ngân hàng Câu Hỏi', icon: 'Q' }] : []),
     ...((user?.permissions || []).some((id) => String(id) === '3') ? [{ to: ROUTES.subjects, label: 'Quản lý Môn Học', icon: 'M' }] : []),
     ...((user?.permissions || []).some((id) => String(id) === '4') ? [{ to: ROUTES.rooms, label: 'Quản lý Phòng Thi', icon: 'R' }] : []),
     ...(String(user?.levelId) === '4' ? [{ to: ROUTES.myClasses, label: 'Lớp học của tôi', icon: 'S' }] : []),

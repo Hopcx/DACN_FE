@@ -33,6 +33,17 @@ Mức bằng chứng: **CODE** có logic source đã xem; **DECLARED** mới th�
 
 ## Theo dõi khi triển khai
 
+### Task 07 tại checkout dev/Hop (2026-10-04)
+
+| Feature | Trạng thái | Bằng chứng hiện tại và phần còn thiếu |
+|---|---|---|
+| F09 | IN_PROGRESS | Lookup `question-types`/`question-levels` dùng trên FE với permission 2; chưa làm màn CRUD loại/mức độ hoặc kiểm xóa lookup đang dùng. |
+| F10 | IN_PROGRESS | `QuestionService` validate loại 1–3; `QuestionRepository.SaveWithAnswersAsync` ghi aggregate trong transaction serializable, chặn sửa/xóa câu đã dùng trong đề hoặc submission. FE `QuestionBankPage.jsx` lọc, tạo, sửa, ẩn và hiển thị đáp án qua API thật. Chưa có SQL fixture để xác minh rollback/concurrency, attachment upload, hoặc dữ liệu lịch sử. |
+| F11 | OPEN | Testify seed chỉ 1–3, `FillAnswer=4` chỉ xuất hiện ở enum UI; chưa có engine tương ứng. API từ chối loại 4. |
+
+Task 07 thêm `GET /web/questions/subjects` cho permission 2, lọc `subjectId/questionTypeId/questionLevelId`, và đổi request POST/PUT câu hỏi sang aggregate `answers`. Các route ghi `/web/answers` trả 405. Admin response có `IsCorrect`; student attempt projection vẫn tách riêng, chưa có attempt API. Không thêm migration. `dotnet build` và smoke validation/quyền/DI, `npm run lint` và Vite build đã qua; chưa đánh dấu VERIFIED khi chưa có SQL E2E.
+
+
 ### Task 06 tại checkout dev/Hop (2026-10-04)
 
 | Feature | Trạng thái | Bằng chứng hiện tại và phần còn thiếu |
