@@ -1,5 +1,17 @@
 # HTTP contract: hiện tại và quy tắc phát triển
 
+## Task 07 — ngân hàng câu hỏi tại `dev/Hop`
+
+`GET /web/questions` (policy `QuestionManagement`, permission 2) nhận `textSearch`, `subjectId`, `questionTypeId`, `questionLevelId`; ba ID lọc phải dương. Response `data` là mảng admin `QuestionResponseDto`, có `answers: [{id,content,isCorrect}]` và `isUsedInExam`. `GET /web/questions/{id}` cũng là admin projection. Không dùng hai response này cho student attempt.
+
+`GET /web/questions/subjects` trả `[{id,name}]` cho người có permission 2, vì `/web/subjects` yêu cầu permission 3. Lookup loại/mức độ vẫn là `/web/question-types`, `/web/question-levels`.
+
+`POST /web/questions` và `PUT /web/questions/{id}` nhận `{content,status,subjectId,questionTypeId,questionLevelId,documentPath,answers:[{content,isCorrect}]}`. `questionLevelId` và `documentPath` có thể null. Loại 1 cần hai đáp án Đúng/Sai và một đáp án đúng; loại 2 cần đúng một đáp án đúng; loại 3 cần ít nhất một đáp án đúng. Mọi loại cần 2–20 đáp án khác nội dung. Chỉ loại 1–3 được nhận. Ghi câu hỏi và toàn bộ đáp án trong transaction serializable; update thay tập đáp án khi câu hỏi chưa được dùng trong đề/bài nộp. `PUT`/`DELETE` trả 409 nếu câu hỏi đã dùng. `DELETE` ẩn bằng status 255. Các route ghi độc lập `POST/PUT/DELETE /web/answers` trả 405; `GET /web/answers` còn dành cho admin.
+
+Không có migration/schema mới. Student attempt vẫn phải dùng projection riêng không có `isCorrect`; Task 07 chưa tạo attempt API. Chưa kiểm SQL rollback thực tế vì chưa có SQL Server fixture.
+
+PUT thay toàn bộ tập đáp án, vì vậy ID đáp án mới sẽ khác ID cũ; client quản trị phải tải lại response sau lưu.
+
 ## FACT — contract đang có
 
 Các controller nghiệp vụ dùng `/web/*`; WeatherForecast dùng route theo controller. SwaggerDoc version v1 không làm path thành /api/v1. Xem [catalogue](04-current-endpoints.md) để lấy action path thật.

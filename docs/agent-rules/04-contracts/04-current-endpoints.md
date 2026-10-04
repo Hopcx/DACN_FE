@@ -1,5 +1,7 @@
 # Endpoint catalogue BE hiện tại
 
+> Task 07 tại `dev/Hop`: bảng dưới là baseline cũ. `GET /web/questions` nhận thêm `subjectId`, `questionTypeId`, `questionLevelId`; `GET /web/questions/subjects` mới dùng permission 2; POST/PUT questions nhận tập `answers` và GET admin trả `isCorrect`. Các thao tác ghi `/web/answers` trả 405. Xem [HTTP contract](01-http.md) và source checkout.
+
 Nguồn: DACN_Project/master `4d5ff309e130f385d207abbc215f5a3b3b4eaa7c`. Trích attribute đang active; chưa chạy request. Domain routes `/web`, không phải `/api/v1`. Auth ghi theo attribute trong source và hiện không có fallback policy. “Chưa gắn” không được xem là đã bảo vệ bởi Swagger security definition.
 
 ## Danh mục controller
