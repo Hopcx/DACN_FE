@@ -14,5 +14,6 @@ export const ROUTES = {
   subjects: '/admin/subjects',
   rooms: '/admin/rooms',
   classes: '/admin/classes',
+  questions: '/admin/questions',
   myClasses: '/student/classes',
 }

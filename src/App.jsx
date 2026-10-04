@@ -16,6 +16,7 @@ import CatalogPage from './pages/catalog/CatalogPage'
 import UserPermissionsPage from './pages/catalog/UserPermissionsPage'
 import AdminClassesPage from './pages/classes/AdminClassesPage'
 import StudentClassesPage from './pages/classes/StudentClassesPage'
+import QuestionBankPage from './pages/questions/QuestionBankPage'
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="subjects" element={<CatalogPage kind="subjects" />} />
           <Route path="rooms" element={<CatalogPage kind="rooms" />} />
           <Route path="classes" element={<AdminClassesPage />} />
+          <Route path="questions" element={<QuestionBankPage />} />
         </Route>
         <Route path="student" element={<DashboardLayout />}>
           <Route path="classes" element={<StudentClassesPage />} />
