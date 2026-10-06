@@ -15,5 +15,6 @@ export const ROUTES = {
   rooms: '/admin/rooms',
   classes: '/admin/classes',
   questions: '/admin/questions',
+  exams: '/admin/exams',
   myClasses: '/student/classes',
 }

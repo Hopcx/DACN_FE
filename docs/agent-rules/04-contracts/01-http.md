@@ -1,5 +1,9 @@
 # HTTP contract: hiện tại và quy tắc phát triển
 
+## Task 08 — cấu hình bài thi và mã đề tại `dev/Hop`
+
+`/web/exams` giữ `maximmumMark` và bổ sung `numberOfRepeat`, `allowViewResult`, `scoreMethodId` trong cấu hình. Permission 1 truy cập `GET /web/exams/subjects`, `GET /web/exams/{id}/question-options`, `GET /web/exams/{id}/variants`, `GET /web/exams/{id}/variants/{variantId}`. Question options chỉ có ID/nội dung/mức độ, không có đáp án. `POST/PUT /web/exams/{id}/variants[/{variantId}]` nhận `{code,status,questionIds,randomSelections:[{questionLevelId,count}]}`. Status 2 nháp, 1 công khai; null questionLevelId chọn mọi mức độ. Server kiểm số câu, trùng câu, môn/trạng thái, đủ câu ngẫu nhiên và tự phân điểm. Các route ghi CRUD cũ của exam-details và exam-detail-questions trả 405. Không thêm migration.
+
 ## Task 07 — ngân hàng câu hỏi tại `dev/Hop`
 
 `GET /web/questions` (policy `QuestionManagement`, permission 2) nhận `textSearch`, `subjectId`, `questionTypeId`, `questionLevelId`; ba ID lọc phải dương. Response `data` là mảng admin `QuestionResponseDto`, có `answers: [{id,content,isCorrect}]` và `isUsedInExam`. `GET /web/questions/{id}` cũng là admin projection. Không dùng hai response này cho student attempt.

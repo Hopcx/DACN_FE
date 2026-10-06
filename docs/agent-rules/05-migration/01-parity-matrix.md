@@ -1,5 +1,9 @@
 # Ma trận chức năng Testify → DACN
 
+## Task 08 tại checkout `dev/Hop` (2026-10-04)
+
+F14/F15 **IN_PROGRESS**. FE thêm danh sách/cấu hình bài thi và mã đề, chọn câu thủ công hoặc số lượng ngẫu nhiên theo mức độ qua API permission 1; BE kiểm invariant và ghi mã đề cùng tập câu trong transaction. API giữ `maximmumMark`, bổ sung NumberOfRepeat/AllowViewResult/ScoreMethodId, không thêm schema. Chưa có SQL fixture để kiểm lịch sử đề khi công khai hoặc dữ liệu thi thật; không đánh dấu VERIFIED.
+
 Mức bằng chứng: **CODE** có logic source đã xem; **DECLARED** mới thấy khai báo/route/model; **PARTIAL** có phần stub/thiếu rõ; không mức nào là “đã test runtime”. BE/FE đã đối chiếu source tại SHA trong README. **CODE** không có nghĩa chạy được; blocker chung B01/B02 và authorization xem audit. FE hầu hết chưa có nghiệp vụ ngoài placeholder auth/dashboard. Những hàng CODE phải có acceptance trước đánh dấu migrated.
 
 | ID | Feature / bằng chứng cũ | Mức | Module đích và acceptance | BE tại commit đối chiếu | FE tại commit đối chiếu |

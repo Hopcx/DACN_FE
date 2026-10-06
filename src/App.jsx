@@ -17,6 +17,7 @@ import UserPermissionsPage from './pages/catalog/UserPermissionsPage'
 import AdminClassesPage from './pages/classes/AdminClassesPage'
 import StudentClassesPage from './pages/classes/StudentClassesPage'
 import QuestionBankPage from './pages/questions/QuestionBankPage'
+import ExamManagementPage from './pages/exams/ExamManagementPage'
 
 export default function App() {
   return (
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="rooms" element={<CatalogPage kind="rooms" />} />
           <Route path="classes" element={<AdminClassesPage />} />
           <Route path="questions" element={<QuestionBankPage />} />
+          <Route path="exams" element={<ExamManagementPage />} />
         </Route>
         <Route path="student" element={<DashboardLayout />}>
           <Route path="classes" element={<StudentClassesPage />} />
