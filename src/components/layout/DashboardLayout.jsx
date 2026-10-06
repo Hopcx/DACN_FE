@@ -20,7 +20,7 @@ export default function DashboardLayout() {
     { to: '/admin/dashboard', label: 'Trang chủ', icon: 'H' },
     { to: '/admin/dashboard', label: 'Quản lý Lịch Thi', icon: 'L' },
     ...(String(user?.levelId) === '1' ? [{ to: ROUTES.classes, label: 'Quản lý Lớp Học', icon: 'C' }] : []),
-    { to: '/admin/dashboard', label: 'Quản lý Đề Thi', icon: 'E' },
+    ...((user?.permissions || []).some((id) => String(id) === '1') ? [{ to: ROUTES.exams, label: 'Quản lý Đề Thi', icon: 'E' }] : []),
     { to: '/admin/dashboard', label: 'Bài Thi', icon: 'T' },
     ...((user?.permissions || []).some((id) => String(id) === '2') ? [{ to: ROUTES.questions, label: 'Ngân hàng Câu Hỏi', icon: 'Q' }] : []),
     ...((user?.permissions || []).some((id) => String(id) === '3') ? [{ to: ROUTES.subjects, label: 'Quản lý Môn Học', icon: 'M' }] : []),
