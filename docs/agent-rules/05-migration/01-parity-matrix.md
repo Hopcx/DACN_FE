@@ -1,5 +1,11 @@
 # Ma trận chức năng Testify → DACN
 
+## Task 12 rồi Task 09 tại checkout `dev/Hop` (2026-10-07)
+
+Quyết định tiếp theo: DB DACN thử nghiệm, chưa ETL Testify; Exam 1→n Schedule. BE có khóa ghi SQL Server cho lịch/gán lớp/duyệt membership, kiểm `[start,end)` cùng phòng và học viên, chặn sửa lịch/gán lớp sau lượt thi/bài nộp. FE hiển thị timestamp có offset theo Asia/Ho_Chi_Minh, giữ nguyên timestamp cũ chưa rõ zone. Preflight DB `ProjectDACN` đã chạy; migration Task09 đã tạo nhưng chưa áp do auth migration còn pending và có một user. Chưa SQL E2E, nên F16/F17 vẫn IN_PROGRESS.
+
+F16/F17 **IN_PROGRESS**. BE kiểm tĩnh migrations/snapshot và lập mapping tại `DACN_Project/docs/agent-rules/05-migration/12-data-readiness.md`; chưa xác minh DB hoặc ETL. BE thêm validation khoảng thời gian/tham chiếu và API lịch theo membership đã duyệt. FE thêm màn đọc lịch quản lý và học viên, nối `/web` qua Axios. Chưa có UI ghi/gán lớp, overlap policy, migration hoặc SQL E2E nên chưa VERIFIED.
+
 ## Task 08 tại checkout `dev/Hop` (2026-10-04)
 
 F14/F15 **IN_PROGRESS**. FE thêm danh sách/cấu hình bài thi và mã đề, chọn câu thủ công hoặc số lượng ngẫu nhiên theo mức độ qua API permission 1; BE kiểm invariant và ghi mã đề cùng tập câu trong transaction. API giữ `maximmumMark`, bổ sung NumberOfRepeat/AllowViewResult/ScoreMethodId, không thêm schema. Chưa có SQL fixture để kiểm lịch sử đề khi công khai hoặc dữ liệu thi thật; không đánh dấu VERIFIED.
