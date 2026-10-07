@@ -1,5 +1,11 @@
 # HTTP contract: hiện tại và quy tắc phát triển
 
+## Task 09 — lịch thi tại checkout `dev/Hop` (2026-10-07)
+
+Quyết định bổ sung: BE yêu cầu `startTime`/`endTime` ISO UTC có `Z` cho ghi lịch mới, và trả 409 khi cùng phòng hoặc học viên đã duyệt có lịch giao nhau (`[start,end)`). FE hiển thị chuỗi có offset theo `Asia/Ho_Chi_Minh`; chuỗi datetime2 cũ không có offset được giữ nguyên và ghi rõ chưa xác định múi giờ. Chưa bật form ghi lịch vì migration quan hệ mới scaffold nhưng chưa áp, và chưa có marker để phân biệt hàng UTC mới với DateTime cũ.
+
+`GET /web/student/schedules` yêu cầu `Student` (level_id=4), trả lịch status=1 của lớp hoạt động mà học viên có membership đã duyệt (status=1), chỉ dựa claim user của server. Payload gồm `{id,title,startTime,endTime,status,roomId,roomName,subjectName}`. `GET /web/exam-schedules/class-options` dùng permission 4, trả `{id,name,classCode}`. `GET /web/exam-schedules` và `GET /web/class-exam-schedules` giữ envelope `ApiResponse`. FE `/admin/schedules` và `/student/schedules` đang đọc các API thật; chưa có thao tác ghi/gán lớp an toàn hoặc migration do quan hệ Exam–Schedule và chính sách overlap chưa chốt.
+
 ## Task 08 — cấu hình bài thi và mã đề tại `dev/Hop`
 
 `/web/exams` giữ `maximmumMark` và bổ sung `numberOfRepeat`, `allowViewResult`, `scoreMethodId` trong cấu hình. Permission 1 truy cập `GET /web/exams/subjects`, `GET /web/exams/{id}/question-options`, `GET /web/exams/{id}/variants`, `GET /web/exams/{id}/variants/{variantId}`. Question options chỉ có ID/nội dung/mức độ, không có đáp án. `POST/PUT /web/exams/{id}/variants[/{variantId}]` nhận `{code,status,questionIds,randomSelections:[{questionLevelId,count}]}`. Status 2 nháp, 1 công khai; null questionLevelId chọn mọi mức độ. Server kiểm số câu, trùng câu, môn/trạng thái, đủ câu ngẫu nhiên và tự phân điểm. Các route ghi CRUD cũ của exam-details và exam-detail-questions trả 405. Không thêm migration.

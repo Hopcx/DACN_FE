@@ -16,5 +16,7 @@ export const ROUTES = {
   classes: '/admin/classes',
   questions: '/admin/questions',
   exams: '/admin/exams',
+  schedules: '/admin/schedules',
   myClasses: '/student/classes',
+  mySchedules: '/student/schedules',
 }
