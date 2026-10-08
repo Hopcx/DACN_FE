@@ -2,9 +2,9 @@
 
 ## Task 12 rồi Task 09 tại checkout `dev/Hop` (2026-10-07)
 
-Quyết định tiếp theo: DB DACN thử nghiệm, chưa ETL Testify; Exam 1→n Schedule. BE có khóa ghi SQL Server cho lịch/gán lớp/duyệt membership, kiểm `[start,end)` cùng phòng và học viên, chặn sửa lịch/gán lớp sau lượt thi/bài nộp. FE hiển thị timestamp có offset theo Asia/Ho_Chi_Minh, giữ nguyên timestamp cũ chưa rõ zone. Preflight DB `ProjectDACN` đã chạy; migration Task09 đã tạo nhưng chưa áp do auth migration còn pending và có một user. Chưa SQL E2E, nên F16/F17 vẫn IN_PROGRESS.
+Quyết định tiếp theo: DB DACN thử nghiệm, chưa ETL Testify; Exam 1→n Schedule. BE có khóa ghi SQL Server cho lịch/gán lớp/duyệt membership, kiểm `[start,end)` cùng phòng và học viên, chặn sửa lịch/gán lớp sau lượt thi/bài nộp. FE hiển thị UTC có offset theo Asia/Ho_Chi_Minh, giữ nguyên timestamp cũ chưa rõ zone. Task04/Task09 và migration marker UTC đã áp trên **bản sao** `ProjectDACN_Task04Task09_Test`; DB gốc chưa áp. SQL E2E và Chrome headless qua Vite proxy đã chạy; F16/F17 vẫn IN_PROGRESS theo các giới hạn dưới đây.
 
-F16/F17 **IN_PROGRESS**. BE kiểm tĩnh migrations/snapshot và lập mapping tại `DACN_Project/docs/agent-rules/05-migration/12-data-readiness.md`; chưa xác minh DB hoặc ETL. BE thêm validation khoảng thời gian/tham chiếu và API lịch theo membership đã duyệt. FE thêm màn đọc lịch quản lý và học viên, nối `/web` qua Axios. Chưa có UI ghi/gán lớp, overlap policy, migration hoặc SQL E2E nên chưa VERIFIED.
+F16/F17 **IN_PROGRESS** (cập nhật 2026-10-08). FE có form tạo/sửa lịch, chọn bài thi/phòng/giờ Việt Nam/trạng thái và xem/gán/hủy lớp. Dùng API `/web` qua Axios, tải lại sau ghi, hiển thị 409 trong modal, khóa thao tác nếu `hasAttempts` hoặc `timeZoneStatus` chưa rõ. Browser test dùng Vite HTTPS proxy tới BE/SQL bản sao: thao tác trực tiếp form tạo và modal gán/hủy được đối chiếu SQL; service tạo/sửa/gán/hủy, 403, 409, UTC sau tải lại, form sửa prefill giờ Việt Nam và nút khóa sau DoingExam đều đạt. Unit test timezone/policy, lint/build đạt. F16 còn thiếu đối soát lịch sử và thử duyệt membership đồng thời; F17 còn thiếu trạng thái trước/trong/sau thi và lịch học viên đầy đủ. Không đánh dấu VERIFIED chỉ vì có màn hình hoặc API 200.
 
 ## Task 08 tại checkout `dev/Hop` (2026-10-04)
 
