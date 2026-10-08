@@ -27,8 +27,8 @@ export default function StudentSchedulesPage() {
       locale={{ emptyText: 'Bạn chưa có lịch thi' }} columns={[
         { title: 'Lịch thi', dataIndex: 'title', render: (value, item) => value || `#${item.id}` },
         { title: 'Môn', dataIndex: 'subjectName', render: (value) => value || '—' },
-        { title: 'Bắt đầu', dataIndex: 'startTime', render: formatScheduleTime },
-        { title: 'Kết thúc', dataIndex: 'endTime', render: formatScheduleTime },
+        { title: 'Bắt đầu', dataIndex: 'startTime', render: (value, item) => formatScheduleTime(value, item.timeZoneStatus) },
+        { title: 'Kết thúc', dataIndex: 'endTime', render: (value, item) => formatScheduleTime(value, item.timeZoneStatus) },
         { title: 'Phòng', dataIndex: 'roomName', render: (value) => value || '—' },
       ]} />
   </section>
