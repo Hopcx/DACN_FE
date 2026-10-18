@@ -1,5 +1,9 @@
 # API thi — contract sketch PROPOSED
 
+Trạng thái 2026-10-11: đã đọc `VibeCoding/Task10.md`; file hiện có và yêu cầu start/resume/save, snapshot, revision, deadline server và trang làm bài. Các route attempt dưới đây vẫn chưa được triển khai. Phần đã chạy thực tế là `GET /web/student/schedules` bổ sung `serverNow`/`scheduleState`, xem `01-http.md`. Cách tính/phạm vi số lượt và deadline O05/O06 đang chờ chốt; rounding/chấm điểm thuộc phần finalize, không chặn việc chuẩn bị snapshot và draft. Không dùng trạng thái `open` của lịch làm xác nhận đủ điều kiện start. Route Submission hiện chỉ dành AdminManagement và các thao tác ghi là NonAction; kết quả cho Student cần route owner riêng khi triển khai engine.
+
+Đã thêm code thuần `AttemptSnapshotFactory` chuẩn bị snapshot từ mã đề công khai, chiếu DTO học viên theo allowlist và validate draft thay toàn bộ. ID câu/options trong snapshot là Guid; DTO không có SourceQuestionId/SourceAnswerId/Point/IsCorrect. Snapshot phía server giữ nguồn và cờ đúng để phục vụ chấm sau này; điểm hiện giữ double của source, chưa chốt rounding hay chuyển dữ liệu cũ. Chưa nối persistence/controller, chưa có route để FE gọi; kiểm cô lập không thay cho nghiệm thu SQL/concurrency.
+
 Các route/field dưới đây là PROPOSED, chưa tồn tại trong BE đã đọc. Dùng prefix /web để đồng nhất với API hiện tại; không nối student submit vào /web/submissions CRUD vì endpoint đó nhận điểm từ request. Envelope ngoài cùng tiếp tục ApiResponse theo 01-http.md; JSON ví dụ bên dưới là phần data.
 
 | Method + route | Input chính | Output / policy |

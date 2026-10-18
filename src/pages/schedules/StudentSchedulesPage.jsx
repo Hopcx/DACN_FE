@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
-import { Alert, Button, Table, Typography } from 'antd'
+import { Alert, Button, Table, Tag, Typography } from 'antd'
 import { getApiError } from '../../api/response'
 import { getMySchedules } from '../../services/scheduleService'
 import { formatScheduleTime } from '../../services/scheduleTime'
+
+const scheduleStates = {
+  upcoming: { label: 'Chưa đến giờ', color: 'blue' },
+  open: { label: 'Trong giờ thi', color: 'green' },
+  ended: { label: 'Đã hết giờ', color: 'default' },
+  unknown: { label: 'Chưa rõ múi giờ', color: 'orange' },
+}
 
 export default function StudentSchedulesPage() {
   const isStudent = String(useSelector((state) => state.auth.user?.levelId)) === '4'
@@ -17,11 +24,20 @@ export default function StudentSchedulesPage() {
     catch (failure) { setError(getApiError(failure)) }
     finally { setLoading(false) }
   }, [isStudent])
-  useEffect(() => { load() }, [load])
-  if (!isStudent) return <Alert type="error" message="Trang này dành cho học viên." />
+  useEffect(() => {
+    load()
+    const timer = window.setInterval(load, 30000)
+    window.addEventListener('focus', load)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', load)
+    }
+  }, [load])
+  if (!isStudent) return <Alert type="error" title="Trang này dành cho học viên." />
   return <section className="p-6">
     <Typography.Title level={2}>Lịch thi của tôi</Typography.Title>
-    {error && <Alert type="error" showIcon message={error} className="mb-4" />}
+    <Typography.Paragraph>Trạng thái giờ thi được cập nhật từ máy chủ mỗi 30 giây.</Typography.Paragraph>
+    {error && <Alert type="error" showIcon title={error} className="mb-4" />}
     <Button onClick={load} className="mb-4">Tải lại</Button>
     <Table rowKey="id" loading={loading} dataSource={rows} pagination={{ pageSize: 10 }}
       locale={{ emptyText: 'Bạn chưa có lịch thi' }} columns={[
@@ -30,6 +46,10 @@ export default function StudentSchedulesPage() {
         { title: 'Bắt đầu', dataIndex: 'startTime', render: (value, item) => formatScheduleTime(value, item.timeZoneStatus) },
         { title: 'Kết thúc', dataIndex: 'endTime', render: (value, item) => formatScheduleTime(value, item.timeZoneStatus) },
         { title: 'Phòng', dataIndex: 'roomName', render: (value) => value || '—' },
+        { title: 'Trạng thái giờ thi', dataIndex: 'scheduleState', render: (value) => {
+          const state = scheduleStates[value] || scheduleStates.unknown
+          return <Tag color={state.color}>{state.label}</Tag>
+        } },
       ]} />
   </section>
 }

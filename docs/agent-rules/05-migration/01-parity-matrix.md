@@ -1,5 +1,18 @@
 # Ma trận chức năng Testify → DACN
 
+## Trạng thái hiện tại — 2026-10-11
+
+Các mục theo ngày bên dưới và bảng baseline mô tả lịch sử; ưu tiên bằng chứng hiện tại ở mục này.
+
+| Feature | Trạng thái | Bằng chứng và phần còn thiếu |
+|---|---|---|
+| F16 Lịch/gán lớp | IN_PROGRESS | SQL Server bản sao đã đạt thêm duyệt membership đồng thời: lịch giao nhau 200/409, chạm biên 200/200, tranh chỗ cuối 200/409; membership bị từ chối vẫn pending, sĩ số không vượt capacity. Fixture lớp/lịch đã dọn. Khoảng trống concurrency approval đã đóng; còn đối soát dữ liệu lịch sử unknown để nghiệm thu parity toàn bộ. |
+| F17 Lịch học viên | IN_PROGRESS | API bổ sung serverNow/scheduleState; FE hiển thị trước/trong/sau giờ lịch và unknown. Chrome → Vite → API → SQL đạt lọc membership đã duyệt, 4 trạng thái, giả giờ máy khách và reload sau đổi fixture. Chưa có trạng thái attempt/nộp/kết quả. |
+| F18 Lượt làm bài | IN_PROGRESS | Đã đọc Task10.md hiện có; thêm factory snapshot, DTO học viên an toàn và validate draft ở mức code thuần. Chưa có persistence/API Start/Resume/Save, revision concurrency, deadline hoặc trang làm bài. Cách tính/phạm vi lượt và deadline đang chờ chốt; chưa nghiệm thu luồng attempt trên SQL. |
+| F19 Nộp/chấm điểm | OPEN | Chưa có finalize idempotent/giao dịch, chấm điểm hoặc kiểm release đáp án. Quy tắc multiple-choice/rounding/ngưỡng đạt còn OPEN; không dùng CRUD Submission nhận điểm từ client. |
+
+Không tạo/áp migration trong lần này; chỉ DB bản sao được ghi fixture. Không đánh dấu VERIFIED từ các test trạng thái lịch. Báo cáo chi tiết tại BE: docs/agent-rules/05-migration/13-task09-task10-acceptance.md.
+
 ## Task 12 rồi Task 09 tại checkout `dev/Hop` (2026-10-07)
 
 Quyết định tiếp theo: DB DACN thử nghiệm, chưa ETL Testify; Exam 1→n Schedule. BE có khóa ghi SQL Server cho lịch/gán lớp/duyệt membership, kiểm `[start,end)` cùng phòng và học viên, chặn sửa lịch/gán lớp sau lượt thi/bài nộp. FE hiển thị UTC có offset theo Asia/Ho_Chi_Minh, giữ nguyên timestamp cũ chưa rõ zone. Task04/Task09 và migration marker UTC đã áp trên **bản sao** `ProjectDACN_Task04Task09_Test`; DB gốc chưa áp. SQL E2E và Chrome headless qua Vite proxy đã chạy; F16/F17 vẫn IN_PROGRESS theo các giới hạn dưới đây.
