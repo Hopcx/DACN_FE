@@ -114,3 +114,8 @@
 }
 
 .room-pagination { display: flex; align-items: center; gap: 12px; }
+
+.attempt-report { margin: 24px 0 36px; }
+.attempt-report__filters { margin: 8px 0 20px; }
+.attempt-report__error { margin-bottom: 16px; }
+.attempt-report .admin-stats-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }

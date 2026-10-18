@@ -1,5 +1,23 @@
 # Ma trận chức năng Testify → DACN
 
+## Task11/Task13 — 2026-10-18
+
+| Feature | Trạng thái | Bằng chứng mới / còn thiếu |
+|---|---|---|
+| F20 Kết quả/lịch sử | IN_PROGRESS | FE `/student/attempts` và chi tiết owner dùng API thật; Chrome → Vite → API → SQL copy đạt kết quả được xem và kết quả ẩn qua list, mở lại và reload. API/SQL có hai học viên, list/paging và owner 404. Chưa đối soát lượt Testify cũ hoặc review đáp án. |
+| F22 Báo cáo | IN_PROGRESS | Dashboard admin gọi API chỉ lấy DACN mới; Chrome → Vite → API → SQL copy hiển thị 5 lượt, finalized 4, timeout 1, hidden 1, pass 2, rate 50%, average 5. API kiểm lọc exam/lớp/môn, trang 1/2 và phổ điểm; Student nhận 403. Chưa cộng lịch sử cũ hoặc void/audit. |
+
+
+## Task10 nghiệm thu bản sao — 2026-10-18
+
+| Feature | Trạng thái | Bằng chứng mới / còn thiếu |
+|---|---|---|
+| F17 Lịch học viên | IN_PROGRESS | Chrome → Vite → API → SQL bản sao đã đi từ lịch vào bài, reload, nộp, xem kết quả được phép và mở lịch sử/URL trực tiếp với kết quả bị ẩn. Chưa đối soát dữ liệu lịch sử timezone unknown và toàn bộ trạng thái lịch có bài cũ. |
+| F18 Lượt làm bài | IN_PROGRESS | API/SQL bản sao đạt start đồng thời, cap `NumberOfRepeat` là tổng lượt, membership, lịch sớm/hết/unknown, snapshot bất biến, lựa chọn ngoài snapshot, save revision đồng thời, owner. Worker chốt 8 lượt quá hạn không cần request, 1 lượt sau API restart và ghi lỗi riêng cho lượt snapshot hỏng. Chrome đạt lưu/khôi phục. Đã kiểm đồng hồ chính xác một tick trước/đúng/sau deadline ở code cô lập và request gửi trước nhưng xử lý sau hạn trên SQL; chưa kiểm đầy đủ mã đề nhiều biến thể và dữ liệu legacy có lượt cũ. |
+| F19 Nộp/chấm | IN_PROGRESS | API/SQL đạt single/multi đúng, thiếu, thừa, bỏ trống, tổng 4.52, ngưỡng 1.004 trước làm tròn, timeout từ draft, submit/sweep đồng thời một kết quả và lặp không đổi. API ẩn `result` khi AllowViewResult=false. Chrome đạt kết quả/thời lượng khi được phép xem. Chưa kiểm race đúng một tick deadline, ẩn kết quả qua browser và nối báo cáo/admin Submission cũ. |
+
+Migrations `20261018053153_Task10ExamAttempts` và `20261018063239_Task10TimeoutAndDuration` chỉ áp trên `ProjectDACN_Task04Task09_Test`; DB gốc vẫn history 1 và không có bảng ExamAttempts. Các dòng trạng thái 2026-10-11 dưới đây là lịch sử trước triển khai Task10.
+
 ## Trạng thái hiện tại — 2026-10-11
 
 Các mục theo ngày bên dưới và bảng baseline mô tả lịch sử; ưu tiên bằng chứng hiện tại ở mục này.
