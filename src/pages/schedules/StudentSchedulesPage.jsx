@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Alert, Button, Table, Tag, Typography } from 'antd'
+import { Link, useNavigate } from 'react-router-dom'
 import { getApiError } from '../../api/response'
 import { getMySchedules } from '../../services/scheduleService'
+import { startAttempt } from '../../services/attemptService'
 import { formatScheduleTime } from '../../services/scheduleTime'
 
 const scheduleStates = {
@@ -13,10 +15,12 @@ const scheduleStates = {
 }
 
 export default function StudentSchedulesPage() {
+  const navigate = useNavigate()
   const isStudent = String(useSelector((state) => state.auth.user?.levelId)) === '4'
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [starting, setStarting] = useState(null)
   const load = useCallback(async () => {
     if (!isStudent) return
     setLoading(true); setError('')
@@ -34,6 +38,12 @@ export default function StudentSchedulesPage() {
     }
   }, [load])
   if (!isStudent) return <Alert type="error" title="Trang này dành cho học viên." />
+  const start = async (row) => {
+    setStarting(row.id); setError('')
+    try { const attempt = await startAttempt(row.id); navigate(`/student/attempts/${attempt.attemptId}`) }
+    catch (failure) { setError(getApiError(failure)) }
+    finally { setStarting(null) }
+  }
   return <section className="p-6">
     <Typography.Title level={2}>Lịch thi của tôi</Typography.Title>
     <Typography.Paragraph>Trạng thái giờ thi được cập nhật từ máy chủ mỗi 30 giây.</Typography.Paragraph>
@@ -50,6 +60,13 @@ export default function StudentSchedulesPage() {
           const state = scheduleStates[value] || scheduleStates.unknown
           return <Tag color={state.color}>{state.label}</Tag>
         } },
+        { title: 'Bài làm', render: (_, row) => <div className="flex gap-2">
+          {row.latestAttemptId && <Link to={`/student/attempts/${row.latestAttemptId}`}>
+            {row.latestAttemptState === 'inProgress' ? 'Tiếp tục' : 'Xem lượt gần nhất'}
+          </Link>}
+          <Button disabled={row.scheduleState !== 'open' || row.latestAttemptState === 'inProgress'}
+            loading={starting === row.id} onClick={() => start(row)}>Vào bài</Button>
+        </div> },
       ]} />
   </section>
 }

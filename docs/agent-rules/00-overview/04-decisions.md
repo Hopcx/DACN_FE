@@ -1,5 +1,11 @@
 # Decision register v0.2
 
+## Quyết định Task10 cho lượt DACN mới — 2026-10-18
+
+Giữ snapshot, deadline UTC cố định và số lượt tính khi transaction start thành công. Chấm điểm từ snapshot bằng `decimal`: mỗi câu chỉ được trọn điểm khi tập chọn bằng đúng tập đáp án đúng; bỏ trống, thiếu hoặc thừa được 0. Cộng điểm trước, so `PassMark` với **tổng chưa làm tròn**, rồi làm tròn tổng một lần đến hai chữ số bằng `MidpointRounding.ToEven` để lưu/hiển thị. Vì vậy có thể hiển thị 1.00 nhưng vẫn đạt ngưỡng 1.004, hoặc hiển thị 1.02 nhưng chưa đạt ngưỡng 1.016. Không đổi trạng thái đạt để khớp điểm hiển thị.
+
+Testify dùng `double` và `Math.Round`: 1.015 cho 1.01; DACN dùng `decimal`: 1.015 cho 1.02. Không sửa hoặc chấm lại điểm lịch sử Testify. Task12 phải liệt kê các ca sai khác số học trong kết quả đối soát, không xem là dữ liệu bị mất. Deadline = `min(serverStart + Exam.Duration, ExamSchedule.EndTime)`; từ `serverNow >= DeadlineUtc` chỉ chấm bản nháp đã lưu. `NumberOfRepeat` là tổng lượt tối đa theo source Testify.
+
 FACT phản ánh commit đã đọc. REQUIRED là quy tắc triển khai trên codebase hiện hữu. PROPOSED không được ngầm coi là đã có code.
 
 | ID | Quyết định / trạng thái | Căn cứ và tác động |
@@ -14,7 +20,7 @@ FACT phản ánh commit đã đọc. REQUIRED là quy tắc triển khai trên c
 | A08 | Chưa triển khai Redis — REQUIRED baseline | Không thấy dependency/tích hợp Redis; chưa có tải để chứng minh cần |
 | A09 | Index theo query; chưa thêm procedure mặc định — REQUIRED | Repo có IADO/helper raw SQL, không phải bằng chứng có stored procedure nghiệp vụ đã deploy |
 | A10 | Giữ AutoMapper 12 + FluentValidation 11 — REQUIRED | Đã dùng cho User; mở rộng có kiểm chứng, không thay bằng framework mới |
-| A11 | Attempt/snapshot/server grading — PROPOSED cần bổ sung | Submission CRUD hiện nhận điểm, chưa có engine thi tin cậy |
+| A11 | Attempt/snapshot/server grading — ĐÃ TRIỂN KHAI CHO LƯỢT MỚI | Attempt API dùng snapshot và finalizer riêng; Submission CRUD lịch sử không dùng để nộp bài mới. Xem contract thi và báo cáo Task10. |
 | A12 | Giữ contract auth body để tích hợp, rồi harden có kế hoạch — REQUIRED | Hiện trả accessToken/refreshToken JSON; HttpOnly cookie và token hash là đích chuyển đổi, chưa tồn tại |
 | A13 | `/web/*` và ApiResponse — FACT/REQUIRED | Không gọi `/api/v1` hay assume response ProblemDetails cho mọi lỗi |
 
@@ -26,8 +32,8 @@ FACT phản ánh commit đã đọc. REQUIRED là quy tắc triển khai trên c
 | O02 | OPEN | Có migrate dữ liệu Testify cũ hay dùng database mới? |
 | O03 | OPEN | FillAnswer, ranked, báo cáo placeholder có phải làm ngay? |
 | O04 | RESOLVED baseline | FE đã có Ant Design/Tailwind; tiếp tục dùng, không cần hỏi chọn lại UI library |
-| O05 | OPEN | Chấm multiple-choice, rounding, tính số lượt lúc start hay finalize |
-| O06 | OPEN | Deadline min(start+duration, scheduleEnd) hay được làm hết duration |
+| O05 | RESOLVED cho lượt DACN mới | Chấm chính xác tập đáp án, không điểm từng phần; decimal ToEven hai chữ số, đạt theo điểm trước làm tròn; tính lượt khi start transaction commit. Lượt Testify cũ giữ nguyên. |
+| O06 | RESOLVED cho lượt DACN mới | Deadline UTC cố định = min(start+duration, scheduleEnd); đúng deadline đã quá hạn. |
 | O07 | OPEN | Quyền Teacher; public registration có được phép không, role mặc định nào |
 | O08 | OPEN | Chính sách sửa lịch/đề đã có người thi |
 | O09 | OPEN | Timezone dữ liệu DateTime cũ; không tự chuyển UTC |

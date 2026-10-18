@@ -20,6 +20,7 @@ import QuestionBankPage from './pages/questions/QuestionBankPage'
 import ExamManagementPage from './pages/exams/ExamManagementPage'
 import AdminSchedulesPage from './pages/schedules/AdminSchedulesPage'
 import StudentSchedulesPage from './pages/schedules/StudentSchedulesPage'
+import StudentAttemptPage from './pages/attempts/StudentAttemptPage'
 
 export default function App() {
   return (
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="student" element={<DashboardLayout />}>
           <Route path="classes" element={<StudentClassesPage />} />
           <Route path="schedules" element={<StudentSchedulesPage />} />
+          <Route path="attempts/:id" element={<StudentAttemptPage />} />
         </Route>
       </Route>
 
