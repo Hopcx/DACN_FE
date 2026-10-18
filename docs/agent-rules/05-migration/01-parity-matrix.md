@@ -1,5 +1,13 @@
 # Ma trận chức năng Testify → DACN
 
+## Task11/Task13 — 2026-10-18
+
+| Feature | Trạng thái | Bằng chứng mới / còn thiếu |
+|---|---|---|
+| F20 Kết quả/lịch sử | IN_PROGRESS | FE `/student/attempts` và chi tiết owner dùng API thật; Chrome → Vite → API → SQL copy đạt kết quả được xem và kết quả ẩn qua list, mở lại và reload. API/SQL có hai học viên, list/paging và owner 404. Chưa đối soát lượt Testify cũ hoặc review đáp án. |
+| F22 Báo cáo | IN_PROGRESS | Dashboard admin gọi API chỉ lấy DACN mới; Chrome → Vite → API → SQL copy hiển thị 5 lượt, finalized 4, timeout 1, hidden 1, pass 2, rate 50%, average 5. API kiểm lọc exam/lớp/môn, trang 1/2 và phổ điểm; Student nhận 403. Chưa cộng lịch sử cũ hoặc void/audit. |
+
+
 ## Task10 nghiệm thu bản sao — 2026-10-18
 
 | Feature | Trạng thái | Bằng chứng mới / còn thiếu |

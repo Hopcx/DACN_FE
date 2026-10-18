@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux'
 import { getRooms } from '../../services/roomService'
 import { getApiError } from '../../api/response'
 import './adminDashboard.css'
+import AdminAttemptReport from './AdminAttemptReport'
 
 export default function AdminDashboardPage() {
   const user = useSelector((state) => state.auth.user)
@@ -24,6 +25,7 @@ export default function AdminDashboardPage() {
     <section className="admin-dashboard">
       <h1 className="admin-dashboard__title">TỔNG QUAN</h1>
       <p className="admin-dashboard__hint">Xin chào, {user?.userName || 'người dùng'}.</p>
+      <AdminAttemptReport />
       <h2 className="admin-dashboard__title">Phòng thi</h2>
       {!canReadRooms && <p>Bạn không có quyền xem danh sách phòng thi.</p>}
       {canReadRooms && error && <p role="alert">{error}</p>}

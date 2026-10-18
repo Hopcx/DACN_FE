@@ -153,6 +153,7 @@ try {
   await cdp.send('Page.enable')
   await cdp.send('Page.reload')
   await eventually(() => cdp.eval(`document.body.innerText.includes('Bản nháp #1') && !!document.querySelector('input[type=radio]:checked')`), 'Restored answer')
+  await eventually(() => cdp.eval(`[...document.querySelectorAll('button')].some(x => x.innerText === 'Nộp bài')`), 'Submit button')
   await cdp.eval(`[...document.querySelectorAll('button')].find(x => x.innerText === 'Nộp bài').click()`)
   const hiddenUi = `(() => { const text=document.querySelector('section')?.innerText || ''; return text.includes('Đã nộp bài') && text.includes('Kết quả chưa được phép xem.') && !/Điểm:|Thời lượng:|Đạt|Chưa đạt|Option one|Option two/.test(text) })()`
   const visibleUi = `document.body.innerText.includes('Đã nộp bài') && document.body.innerText.includes('Điểm: 5') && document.body.innerText.includes('Thời lượng:')`
@@ -180,6 +181,19 @@ try {
   }
   await cdp.send('Page.reload')
   await eventually(() => cdp.eval(hiddenResult ? hiddenUi : visibleUi), 'Reloaded result UI')
+  await cdp.send('Page.navigate', { url: 'https://localhost:5173/student/attempts' })
+  await eventually(() => cdp.eval(`document.body.innerText.includes('Lịch sử làm bài') && document.body.innerText.includes('Browser ${tag}')`), 'Student attempt history UI')
+  const historyRow = await cdp.eval(`[...document.querySelectorAll('tr[data-row-key]')].find(x => x.innerText.includes('Browser ${tag}'))?.innerText`)
+  if (!historyRow || (hiddenResult && (/\b5\b|Đạt|Option one|Option two/.test(historyRow) || !historyRow.includes('Chưa được phép xem'))))
+    throw new Error('History row leaks hidden result or is absent')
+  const historyRaw = await cdp.eval(`(async () => { const client=(await import('/src/api/axiosClient.js')).default;
+    return (await client.get('/attempts/mine')).data })()`)
+  const historyItem = historyRaw.data?.items?.find((item) => item.attemptId === attemptId)
+  if (!historyItem || (hiddenResult && (historyItem.result !== null ||
+      /"(totalMark|isPassed|isCorrect|answersJson|snapshotJson)"/i.test(JSON.stringify(historyItem)))))
+    throw new Error('History API leaked hidden result or missed attempt')
+  await cdp.eval(`document.querySelector('a[href="/student/attempts/${attemptId}"]').click()`)
+  await eventually(() => cdp.eval(hiddenResult ? hiddenUi : visibleUi), 'History row detail UI')
   if (sql(`SELECT COUNT(*) FROM dbo.ExamAttemptSubmissions WHERE ExamAttemptId IN (SELECT Id FROM dbo.ExamAttempts WHERE ExamId=${fixture[0]});`) !== '1')
     throw new Error('Browser submission not persisted')
   console.log(hiddenResult ? 'TASK10_BROWSER_HIDDEN_RESULT_API_SQL=PASS' : 'TASK10_BROWSER_SCHEDULE_START_SAVE_RELOAD_SUBMIT_RESULT_SQL=PASS')

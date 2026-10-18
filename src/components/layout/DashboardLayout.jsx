@@ -16,6 +16,7 @@ export default function DashboardLayout() {
   const navItems = String(user?.levelId) === '4' ? [
     { to: ROUTES.myClasses, label: 'Lớp học của tôi', icon: 'S' },
     { to: ROUTES.mySchedules, label: 'Lịch thi của tôi', icon: 'L' },
+    { to: '/student/attempts', label: 'Lịch sử làm bài', icon: 'K' },
     { to: ROUTES.profile, label: 'Hồ sơ của tôi', icon: 'P' },
   ] : [
     { to: '/admin/dashboard', label: 'Trang chủ', icon: 'H' },

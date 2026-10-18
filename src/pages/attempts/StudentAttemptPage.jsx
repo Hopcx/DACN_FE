@@ -66,6 +66,7 @@ export default function StudentAttemptPage() {
   return <section className="p-6">
     <Typography.Title level={2}>Bài làm</Typography.Title>
     <Link to="/student/schedules">Lịch thi của tôi</Link>
+    <span> · </span><Link to="/student/attempts">Lịch sử làm bài</Link>
     {error && <Alert type="error" showIcon title={error} className="my-4" />}
     <div className="my-4"><Button onClick={load} disabled={busy}>Tải lại từ máy chủ</Button></div>
     {attempt && <>

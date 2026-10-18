@@ -1,5 +1,11 @@
 # API thi — contract hiện hành và phụ lục lịch sử
 
+## Task11/Task13 — lịch sử và báo cáo mới
+
+BE cung cấp `GET /web/attempts/mine?page=&pageSize=` cho Student, chỉ gồm `ExamAttempts` của JWT hiện tại. Response `scope=dacnAttemptsOnly`, `totalCount`, `items`, có trạng thái và mốc UTC. `result` chỉ có điểm/đạt/thời lượng nếu snapshot `AllowViewResult=true`; với kết quả ẩn là `null` từ API, kể cả list và detail. Trang FE `/student/attempts` hiển thị thời gian theo Asia/Ho_Chi_Minh và mở detail `/student/attempts/{id}`. Dữ liệu `DoingExam`/`Submission` cũ chưa có trong lịch sử mới.
+
+Admin level 1 đọc `GET /web/admin/attempt-reports` và `/options`, lọc theo exam/class/subject, phân trang. Scope là lượt DACN mới, không cộng Submission cũ. `summary.finalizedCount` là các lượt `submitted`/`timedOut` có submission; `inProgress` ngoài mẫu số; cả timeout và kết quả học viên bị ẩn vẫn tính vào tỷ lệ đạt, trung bình và phổ điểm admin. Filter lớp là lịch gán vào lớp, không khẳng định học viên dự thi qua lớp đó. Màn `/admin/dashboard` hiển thị scope rõ và lấy số thật từ API. Xem contract chi tiết ở BE `docs/agent-rules/04-contracts/02-exam-api.md`.
+
 ## Task10 đã triển khai trên DB bản sao — 2026-10-18
 
 **Quyết định điểm cho lượt DACN mới:** tính từ snapshot bằng `decimal`, cộng trước rồi làm tròn tổng một lần tới hai chữ số `MidpointRounding.ToEven`; so đạt với tổng **trước làm tròn**. Do đó raw `1.005`, PassMark `1.004` → lưu/hiển thị `1.00`, `isPassed=true`; raw `1.015`, PassMark `1.016` → lưu/hiển thị `1.02`, `isPassed=false`. Trạng thái đạt có thể trông khác điểm hai chữ số ở sát ngưỡng; FE hiển thị cả hai giá trị server trả và không tự tính lại. Testify dùng `double`: `Math.Round(1.015d,2)=1.01`, còn DACN dùng `decimal` cho `1.02`. Giữ điểm Testify lịch sử, không chấm lại; Task12 liệt kê sai khác số học khi đối soát, không xem là mất dữ liệu.
