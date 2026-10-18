@@ -3,6 +3,8 @@ import { readPayload } from '../api/response'
 import { store } from '../redux/store'
 import { clearSession, setSession, setUser } from '../redux/slices/authSlice'
 
+let resumePromise = null
+
 export async function login(keyword, password) {
   const data = readPayload(await axiosClient.post('/auth/login', { keyword, password }, { skipAuth: true }))
   if (!data.accessToken || !data.userId) {
@@ -30,23 +32,28 @@ export async function logout() {
   store.dispatch(clearSession())
 }
 
-export async function resumeSession() {
+export function resumeSession() {
   const current = store.getState().auth
-  if (current.accessToken && current.user) return current.user
-  const data = readPayload(await axiosClient.post('/auth/refresh', {}, { skipAuth: true }))
-  if (!data.accessToken || !data.userId) throw new Error('Phiên không hợp lệ.')
-  try {
-    const me = readPayload(await axiosClient.get('/auth/me', {
-      skipAuth: true, headers: { Authorization: `Bearer ${data.accessToken}` },
-    }))
-    if (String(me.userId).toLowerCase() !== String(data.userId).toLowerCase())
-      throw new Error('Thông tin phiên không khớp.')
-    store.dispatch(setSession({ accessToken: data.accessToken, user: me }))
-    return me
-  } catch (error) {
-    store.dispatch(clearSession())
-    throw error
+  if (current.accessToken && current.user) return Promise.resolve(current.user)
+  if (!resumePromise) {
+    resumePromise = (async () => {
+      const data = readPayload(await axiosClient.post('/auth/refresh', {}, { skipAuth: true }))
+      if (!data.accessToken || !data.userId) throw new Error('Phiên không hợp lệ.')
+      try {
+        const me = readPayload(await axiosClient.get('/auth/me', {
+          skipAuth: true, headers: { Authorization: `Bearer ${data.accessToken}` },
+        }))
+        if (String(me.userId).toLowerCase() !== String(data.userId).toLowerCase())
+          throw new Error('Thông tin phiên không khớp.')
+        store.dispatch(setSession({ accessToken: data.accessToken, user: me }))
+        return me
+      } catch (error) {
+        store.dispatch(clearSession())
+        throw error
+      }
+    })().finally(() => { resumePromise = null })
   }
+  return resumePromise
 }
 
 export async function registerStudent(payload) {

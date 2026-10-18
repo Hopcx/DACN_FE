@@ -1,5 +1,9 @@
 # HTTP contract: hiện tại và quy tắc phát triển
 
+## Task10 lịch học viên — 2026-10-18
+
+`GET /web/student/schedules` thêm `latestAttemptId` (Guid hoặc null) và `latestAttemptState` (`inProgress`, `submitted`, `timedOut` hoặc null) cho lượt mới gần nhất của chính học viên trong lịch. Nếu deadline lượt đang mở đã qua, state hiển thị là `timedOut`; GET attempt/submit sẽ ghi kết quả timeout vào SQL. FE dùng ID này để tiếp tục hoặc xem trạng thái sau thi; thao tác start vẫn do API kiểm quyền, giờ và giới hạn lượt.
+
 ## Bổ sung lịch học viên — 2026-10-11
 
 `GET /web/student/schedules` giữ mảng data và policy Student, thêm `serverNow` UTC có Z và `scheduleState` vào mỗi phần tử. State = unknown nếu IsTimeUtc=false; với lịch UTC: upcoming khi serverNow < startTime, open khi startTime <= serverNow < endTime, ended khi serverNow >= endTime. Một response dùng chung một mốc giờ server. Đây là trạng thái thời gian của lịch, chưa phải quyền bắt đầu hoặc trạng thái attempt. Lọc theo membership đã duyệt/lớp hoạt động giữ nguyên. FE lấy nhãn từ API, refresh mỗi 30 giây/khi focus hoặc Tải lại.
