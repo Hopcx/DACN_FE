@@ -1,5 +1,11 @@
 # HTTP contract: hiện tại và quy tắc phát triển
 
+## Bổ sung lịch học viên — 2026-10-11
+
+`GET /web/student/schedules` giữ mảng data và policy Student, thêm `serverNow` UTC có Z và `scheduleState` vào mỗi phần tử. State = unknown nếu IsTimeUtc=false; với lịch UTC: upcoming khi serverNow < startTime, open khi startTime <= serverNow < endTime, ended khi serverNow >= endTime. Một response dùng chung một mốc giờ server. Đây là trạng thái thời gian của lịch, chưa phải quyền bắt đầu hoặc trạng thái attempt. Lọc theo membership đã duyệt/lớp hoạt động giữ nguyên. FE lấy nhãn từ API, refresh mỗi 30 giây/khi focus hoặc Tải lại.
+
+SQL Server/API đã kiểm duyệt membership đồng thời: hai lớp/lịch giao nhau trả 200/409, chạm biên trả 200/200; tranh chỗ cuối cùng lớp trả 200/409. Membership bị từ chối không đổi, sĩ số không vượt capacity. Chưa triển khai route attempt hay migration Task10.
+
 ## Task 09 — lịch thi tại checkout `dev/Hop` (2026-10-07)
 
 Quyết định bổ sung: BE yêu cầu `startTime`/`endTime` ISO UTC có `Z` cho ghi lịch mới, và trả 409 khi cùng phòng hoặc học viên đã duyệt có lịch giao nhau (`[start,end)`). Migration marker `IsTimeUtc` đã áp **chỉ trên DB thử**: response có `timeZoneStatus="utc"` và `Z` cho lịch mới; hàng cũ là `"unknown"`, không chuyển đổi giờ. FE nhập/hiển thị theo `Asia/Ho_Chi_Minh`, chuyển sang UTC `Z` trước POST/PUT. FE khóa sửa/xóa/gán/hủy khi `hasAttempts=true` hoặc timezone chưa rõ; BE cũng trả 409 cho PUT/xóa mềm lịch và POST/PUT/DELETE gán lớp vào lịch cũ chưa rõ múi giờ.
