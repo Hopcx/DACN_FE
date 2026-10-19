@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Alert, Button, Card, Checkbox, Radio, Space, Typography } from 'antd'
 import { getApiError } from '../../api/response'
-import { getAttempt, saveAttempt, submitAttempt } from '../../services/attemptService'
+import { getAttempt, getAttemptReview, saveAttempt, submitAttempt } from '../../services/attemptService'
 
 const toDraft = (answers = []) => Object.fromEntries(answers.map((x) => [x.questionId, x.selectedAnswerIds]))
 const payload = (questions, choices) => questions.map((q) => ({ questionId: q.id, selectedAnswerIds: choices[q.id] || [] }))
@@ -10,6 +10,7 @@ const payload = (questions, choices) => questions.map((q) => ({ questionId: q.id
 export default function StudentAttemptPage() {
   const { id } = useParams()
   const [attempt, setAttempt] = useState(null)
+  const [review, setReview] = useState(null)
   const [choices, setChoices] = useState({})
   const [dirty, setDirty] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -22,6 +23,7 @@ export default function StudentAttemptPage() {
     try {
       const data = await getAttempt(id)
       setAttempt(data)
+      setReview(null)
       setChoices(toDraft(data.savedAnswers))
       setDirty(false)
       setServerClock({ now: Date.parse(data.serverNow), at: performance.now() })
@@ -54,6 +56,7 @@ export default function StudentAttemptPage() {
       if (dirty && remaining > 0) current = await saveAttempt(id, current.revision, payload(current.questions, choices))
       const updated = await submitAttempt(id, current.revision)
       setAttempt(updated); setDirty(false)
+      setReview(null)
       setServerClock({ now: Date.parse(updated.serverNow), at: performance.now() })
     } catch (failure) { setError(`${getApiError(failure)}. Tải lại để xác nhận trạng thái trên máy chủ.`) }
     finally { setBusy(false) }
@@ -61,6 +64,13 @@ export default function StudentAttemptPage() {
   const choose = (question, values) => {
     setChoices((old) => ({ ...old, [question.id]: values }))
     setDirty(true)
+  }
+  const loadReview = async () => {
+    if (!attempt?.result || busy) return
+    setBusy(true); setError('')
+    try { setReview(await getAttemptReview(id)) }
+    catch (failure) { setReview(null); setError(getApiError(failure)) }
+    finally { setBusy(false) }
   }
 
   return <section className="p-6">
@@ -85,8 +95,21 @@ export default function StudentAttemptPage() {
         </Card>)}
         <Space><Button onClick={save} loading={busy} disabled={!dirty || remaining === 0}>Lưu đáp án</Button>
           <Button type="primary" onClick={submit} loading={busy}>Nộp bài</Button></Space>
-      </> : <Alert type="info" showIcon title={attempt.state === 'timedOut' ? 'Đã hết thời gian làm bài' : 'Đã nộp bài'}
-        description={attempt.result ? `Điểm: ${attempt.result.totalMark} · ${attempt.result.isPassed ? 'Đạt' : 'Chưa đạt'}${attempt.result.timeTakenSeconds == null ? '' : ` · Thời lượng: ${attempt.result.timeTakenSeconds} giây`}` : 'Kết quả chưa được phép xem.'} />}
+      </> : <>
+        <Alert type="info" showIcon title={attempt.state === 'voided' ? 'Đã hủy' : attempt.state === 'timedOut' ? 'Đã hết thời gian làm bài' : 'Đã nộp bài'}
+          description={attempt.state === 'voided' ? 'Kết quả của lượt thi này đã bị hủy.'
+            : attempt.result ? `Điểm: ${attempt.result.totalMark} · ${attempt.result.isPassed ? 'Đạt' : 'Chưa đạt'}${attempt.result.timeTakenSeconds == null ? '' : ` · Thời lượng: ${attempt.result.timeTakenSeconds} giây`}`
+              : 'Kết quả chưa được phép xem.'} />
+        {attempt.result && <div className="my-4"><Button onClick={loadReview} loading={busy}>Xem lại bài</Button>
+          <Typography.Text className="ml-2">Đáp án chỉ được mở sau khi lịch thi kết thúc.</Typography.Text></div>}
+        {review?.questions?.map((question, index) => <Card key={question.id} title={`Câu ${index + 1}`} className="mb-4">
+          <Typography.Paragraph>{question.content}</Typography.Paragraph>
+          {question.options.map((option) => <Typography.Paragraph key={option.id}>
+            {question.selectedAnswerIds.includes(option.id) ? '☑ ' : '□ '}{option.content}
+            {option.isCorrect ? ' · Đáp án đúng' : ''}
+          </Typography.Paragraph>)}
+        </Card>)}
+      </>}
     </>}
   </section>
 }

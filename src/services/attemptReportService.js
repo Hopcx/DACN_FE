@@ -6,3 +6,6 @@ export const getAttemptReport = async (params) =>
 
 export const getAttemptReportOptions = async () =>
   readPayload(await axiosClient.get('/admin/attempt-reports/options'))
+
+export const voidAttempt = async (id, reason) =>
+  readPayload(await axiosClient.post(`/admin/attempts/${id}/void`, { reason }))

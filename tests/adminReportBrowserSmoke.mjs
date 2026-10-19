@@ -7,7 +7,8 @@ import path from 'node:path'
 const email = process.env.DACN_QA_EMAIL
 const password = process.env.DACN_QA_PASSWORD
 const tag = process.env.DACN_QA_TAG
-if (!email || !password || !tag) throw new Error('Missing short-lived QA fixture credentials')
+const attemptId = process.env.DACN_QA_ATTEMPT_ID
+if (!email || !password || !tag || !attemptId) throw new Error('Missing short-lived QA fixture credentials')
 const profile = await mkdtemp(path.join(tmpdir(), 'dacn-admin-report-'))
 const port = 9300 + Math.floor(Math.random() * 1000)
 const chromePath = process.env.DACN_CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
@@ -79,6 +80,19 @@ try {
   }
   const rows = await evaluate(`document.querySelectorAll('.attempt-report tr[data-row-key]').length`)
   if (rows !== 5) throw new Error(`Admin report rows: ${rows}`)
+  await evaluate(`[...document.querySelectorAll('tr[data-row-key]')].find(row =>
+    row.dataset.rowKey?.toLowerCase() === ${JSON.stringify(attemptId.toLowerCase())})?.querySelector('button').click()`)
+  await eventually(() => evaluate(`!!document.querySelector('.ant-modal textarea')`), 'Void modal')
+  await evaluate(`document.querySelector('.ant-modal textarea').focus()`)
+  await send('Input.insertText', { text: 'QA audit reason' })
+  await eventually(() => evaluate(`[...document.querySelectorAll('.ant-modal button')].some(x => x.innerText.includes('Xác nhận hủy') && !x.disabled)`), 'Void confirmation')
+  await evaluate(`[...document.querySelectorAll('.ant-modal button')].find(x => x.innerText.includes('Xác nhận hủy')).click()`)
+  await eventually(() => evaluate(`Object.fromEntries([...document.querySelectorAll('.attempt-report .admin-stat-card')].map(card => [
+    card.querySelector('.admin-stat-card__label')?.innerText, card.querySelector('.admin-stat-card__value')?.innerText]))['Đã hủy'] === '1'`), 'Voided report')
+  const after = await evaluate(`Object.fromEntries([...document.querySelectorAll('.attempt-report .admin-stat-card')].map(card => [
+    card.querySelector('.admin-stat-card__label')?.innerText, card.querySelector('.admin-stat-card__value')?.innerText]))`)
+  if (after['Đã chốt'] !== '3' || after['Đạt'] !== '1' || after['Tỷ lệ đạt'] !== '33.33%' || after['Điểm trung bình'] !== '4')
+    throw new Error(`Post-void browser stats mismatch: ${JSON.stringify(after)}`)
   console.log('TASK13_ADMIN_BROWSER_API_SQL=PASS')
 } finally {
   socket?.close()
