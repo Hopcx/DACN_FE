@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Alert, Button, Input, Modal, Select, Space, Table, Typography } from 'antd'
 import { getApiError } from '../../api/response'
-import { getAttemptReport, getAttemptReportOptions, voidAttempt } from '../../services/attemptReportService'
+import { getAttemptReport, getAttemptReportOptions, getLegacySubmissionReport, voidAttempt } from '../../services/attemptReportService'
 import { formatScheduleTime } from '../../services/scheduleTime'
 
 const time = (value) => formatScheduleTime(value, 'utc')
@@ -13,6 +13,10 @@ export default function AdminAttemptReport() {
   const [page, setPage] = useState(1)
   const [options, setOptions] = useState(null)
   const [report, setReport] = useState(null)
+  const [legacyPage, setLegacyPage] = useState(1)
+  const [legacyStatus, setLegacyStatus] = useState(undefined)
+  const [legacyReport, setLegacyReport] = useState(null)
+  const [legacyError, setLegacyError] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [voidTarget, setVoidTarget] = useState(null)
@@ -26,6 +30,11 @@ export default function AdminAttemptReport() {
     finally { setLoading(false) }
   }, [filters, page])
   useEffect(() => { load() }, [load])
+  const loadLegacy = useCallback(async () => {
+    try { setLegacyReport(await getLegacySubmissionReport({ page: legacyPage, pageSize: 10, status: legacyStatus })); setLegacyError('') }
+    catch (failure) { setLegacyReport(null); setLegacyError(getApiError(failure)) }
+  }, [legacyPage, legacyStatus])
+  useEffect(() => { loadLegacy() }, [loadLegacy])
   useEffect(() => {
     getAttemptReportOptions().then(setOptions).catch((failure) => setError(getApiError(failure)))
   }, [])
@@ -100,5 +109,29 @@ export default function AdminAttemptReport() {
       <Input.TextArea value={voidReason} onChange={(event) => setVoidReason(event.target.value)}
         maxLength={1000} showCount rows={3} placeholder="Lý do hủy (bắt buộc)" />
     </Modal>
+    <Typography.Title level={2}>Bài nộp từ nguồn lịch sử</Typography.Title>
+    <Typography.Paragraph>Phạm vi riêng <code>legacySubmissionsOnly</code>; số liệu trên không cộng bài cũ. Trạng thái gốc không đồng nghĩa với hủy kết quả DACN. Giờ gốc chưa rõ múi giờ.</Typography.Paragraph>
+    {legacyError && <Alert type="error" showIcon title={legacyError} className="attempt-report__error" />}
+    <Select allowClear placeholder="Status lịch sử" style={{ width: 190 }} value={legacyStatus}
+      options={[{ value: 'accepted', label: 'Chấp nhận' }, { value: 'notRecognized', label: 'Không công nhận' }, { value: 'pending', label: 'Chờ kiểm tra' }]}
+      onChange={(value) => { setLegacyPage(1); setLegacyStatus(value) }} />
+    <Button onClick={loadLegacy}>Tải lại bài cũ</Button>
+    {legacyReport && <Typography.Paragraph>
+      Tổng: {legacyReport.summary.totalSubmissions} · Chấp nhận: {legacyReport.summary.acceptedStatusCount}
+      {' '}· Không công nhận: {legacyReport.summary.notRecognizedStatusCount}
+      {' '}· Chờ kiểm tra: {legacyReport.summary.pendingStatusCount}
+      {' '}· Tổng điểm gốc: {legacyReport.summary.storedScoreSum}
+    </Typography.Paragraph>}
+    <Table rowKey="id" dataSource={legacyReport?.items || []}
+      pagination={{ current: legacyPage, pageSize: 10, total: legacyReport?.totalCount || 0,
+        showSizeChanger: false, onChange: setLegacyPage }} columns={[
+        { title: 'Nguồn', render: (_, row) => `${row.sourceSystem}/${row.sourceDatabase}` },
+        { title: 'ID nguồn', dataIndex: 'legacyId' },
+        { title: 'Bài thi', dataIndex: 'examName' },
+        { title: 'Giờ gốc', dataIndex: 'submittedAtLocalUnknown' },
+        { title: 'Status gốc', dataIndex: 'legacyStatus', render: (value) => value === true ? 'Chấp nhận' : value === false ? 'Không công nhận' : 'Chờ kiểm tra' },
+        { title: 'Điểm lưu', dataIndex: 'totalMark' },
+        { title: 'Đạt', dataIndex: 'isPassed', render: (value) => value ? 'Đạt' : 'Chưa đạt' },
+      ]} />
   </section>
 }

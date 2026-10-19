@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Alert, Button, Select, Table, Typography } from 'antd'
 import { getApiError } from '../../api/response'
-import { getMyAttemptHistory } from '../../services/attemptService'
+import { getMyAttemptHistory, getMyLegacySubmissions } from '../../services/attemptService'
 import { formatScheduleTime } from '../../services/scheduleTime'
 
 const stateLabel = { inProgress: 'Đang làm', submitted: 'Đã nộp', timedOut: 'Hết giờ', voided: 'Đã hủy' }
@@ -12,6 +12,9 @@ export default function StudentAttemptHistoryPage() {
   const [page, setPage] = useState(1)
   const [state, setState] = useState(undefined)
   const [history, setHistory] = useState(null)
+  const [legacyPage, setLegacyPage] = useState(1)
+  const [legacy, setLegacy] = useState(null)
+  const [legacyError, setLegacyError] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const load = useCallback(async () => {
@@ -21,10 +24,15 @@ export default function StudentAttemptHistoryPage() {
     finally { setLoading(false) }
   }, [page, state])
   useEffect(() => { load() }, [load])
+  const loadLegacy = useCallback(async () => {
+    try { setLegacy(await getMyLegacySubmissions(legacyPage, 10)); setLegacyError('') }
+    catch (failure) { setLegacy(null); setLegacyError(getApiError(failure)) }
+  }, [legacyPage])
+  useEffect(() => { loadLegacy() }, [loadLegacy])
 
   return <section className="p-6">
     <Typography.Title level={2}>Lịch sử làm bài</Typography.Title>
-    <Typography.Paragraph>Chỉ gồm lượt thi DACN mới của bạn. Lượt thi cũ đang chờ đối soát.</Typography.Paragraph>
+    <Typography.Paragraph>Lượt thi DACN mới và bài nộp từ nguồn lịch sử được hiển thị riêng.</Typography.Paragraph>
     {error && <Alert type="error" showIcon title={error} className="mb-4" />}
     <Select allowClear placeholder="Trạng thái" value={state} className="mr-2" style={{ width: 180 }}
       options={Object.entries(stateLabel).map(([value, label]) => ({ value, label }))}
@@ -43,6 +51,23 @@ export default function StudentAttemptHistoryPage() {
           ? `${row.result.totalMark} · ${row.result.isPassed ? 'Đạt' : 'Chưa đạt'}`
           : row.state === 'inProgress' || row.state === 'voided' ? '—' : 'Chưa được phép xem' },
         { title: 'Chi tiết', render: (_, row) => <Link to={`/student/attempts/${row.attemptId}`}>Mở lượt thi</Link> },
+      ]} />
+    <Typography.Title level={3}>Bài nộp lịch sử</Typography.Title>
+    <Typography.Paragraph>Dữ liệu có nguồn riêng; thời gian gốc chưa rõ múi giờ. Bài cũ không có snapshot để xem đáp án đúng.</Typography.Paragraph>
+    {legacyError && <Alert type="error" showIcon title={legacyError} className="mb-4" />}
+    <Button onClick={loadLegacy} className="mb-4">Tải lại bài cũ</Button>
+    <Table rowKey="id" dataSource={legacy?.items || []}
+      pagination={{ current: legacyPage, pageSize: legacy?.pageSize || 10, total: legacy?.totalCount || 0,
+        showSizeChanger: false, onChange: setLegacyPage }}
+      locale={{ emptyText: 'Chưa có bài nộp lịch sử' }} columns={[
+        { title: 'Nguồn', dataIndex: 'sourceSystem' },
+        { title: 'Bài thi', dataIndex: 'examName' },
+        { title: 'Lịch', dataIndex: 'scheduleTitle' },
+        { title: 'Giờ gốc (múi giờ chưa rõ)', dataIndex: 'submittedAtLocalUnknown' },
+        { title: 'Trạng thái gốc', dataIndex: 'legacyStatus', render: (value) => value === true ? 'Chấp nhận' : value === false ? 'Không công nhận' : 'Chờ kiểm tra' },
+        { title: 'Kết quả', dataIndex: 'result', render: (value) => value
+          ? `${value.totalMark} · ${value.isPassed ? 'Đạt' : 'Chưa đạt'}` : 'Chưa được phép xem' },
+        { title: 'Xem bài', render: () => 'Không có snapshot' },
       ]} />
   </section>
 }
