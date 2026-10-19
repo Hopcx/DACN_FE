@@ -15,6 +15,8 @@ const chrome = spawn(browserPath, ['--headless=new', '--no-first-run', '--no-def
   `--user-data-dir=${profile}`, 'about:blank'], { stdio: 'ignore' })
 let socket
 let fixture
+let email
+let verificationMailPath
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 async function eventually(fn, label) {
   for (let i = 0; i < 80; i += 1) {
@@ -72,7 +74,7 @@ try {
   await cdp.send('Runtime.enable')
   await eventually(() => cdp.eval(`document.body?.innerText.includes('Đăng Nhập')`), 'FE login')
   const tag = randomUUID().replaceAll('-', '').slice(0, 10)
-  const email = `attemptbrowser${tag}@example.invalid`
+  email = `attemptbrowser${tag}@example.invalid`
   const password = `Qa7${randomBytes(12).toString('hex')}`
   const account = { fullName: 'Attempt Browser QA', userName: `attemptbrowser${tag}`, email, password,
     address: 'QA only', dateOfBirth: '2000-01-01T00:00:00Z', sex: true }
@@ -94,7 +96,7 @@ try {
     for (const name of await readdir(maildrop)) {
       if (!name.startsWith('verify-')) continue
       const body = await readFile(path.join(maildrop, name), 'utf8')
-      if (body.includes(`To: ${email}`)) return body
+      if (body.includes(`To: ${email}`)) { verificationMailPath = path.join(maildrop, name); return body }
     }
     return null
   }, 'Verification mail')
@@ -230,6 +232,20 @@ try {
       DELETE dbo.ExamDetailQuestions WHERE ExamDetailId IN (SELECT Id FROM dbo.ExamDetails WHERE ExamId=${exam});
       DELETE dbo.Answers WHERE QuestionId=${question}; DELETE dbo.Questions WHERE Id=${question};
       DELETE dbo.ExamDetails WHERE ExamId=${exam}; DELETE dbo.Exams WHERE Id=${exam};`)
+  }
+  if (email && /^attemptbrowser[a-f0-9]{10}@example\.invalid$/.test(email)) {
+    sql(`DECLARE @qa uniqueidentifier=(SELECT Id FROM dbo.Users WHERE Email=N'${email}');
+      IF @qa IS NOT NULL BEGIN
+        DELETE dbo.RefreshTokens WHERE UserId=@qa;
+        DELETE dbo.EmailVerificationTokens WHERE UserId=@qa;
+        DELETE dbo.UserPermissions WHERE UserId=@qa;
+        DELETE dbo.Users WHERE Id=@qa;
+      END;`)
+    if (sql(`SELECT COUNT(*) FROM dbo.Users WHERE Email=N'${email}';`) !== '0')
+      throw new Error('Browser QA user cleanup failed')
+  }
+  if (verificationMailPath && path.resolve(verificationMailPath).startsWith(path.resolve('..', 'DACN_Project', 'Project.Api', '.maildrop') + path.sep)) {
+    try { await rm(verificationMailPath, { force: true }) } catch { /* QA mail only */ }
   }
   socket?.close()
   chrome.kill()
