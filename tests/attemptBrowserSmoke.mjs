@@ -15,6 +15,8 @@ const chrome = spawn(browserPath, ['--headless=new', '--no-first-run', '--no-def
   `--user-data-dir=${profile}`, 'about:blank'], { stdio: 'ignore' })
 let socket
 let fixture
+let email
+let verificationMailPath
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 async function eventually(fn, label) {
   for (let i = 0; i < 80; i += 1) {
@@ -72,7 +74,7 @@ try {
   await cdp.send('Runtime.enable')
   await eventually(() => cdp.eval(`document.body?.innerText.includes('Đăng Nhập')`), 'FE login')
   const tag = randomUUID().replaceAll('-', '').slice(0, 10)
-  const email = `attemptbrowser${tag}@example.invalid`
+  email = `attemptbrowser${tag}@example.invalid`
   const password = `Qa7${randomBytes(12).toString('hex')}`
   const account = { fullName: 'Attempt Browser QA', userName: `attemptbrowser${tag}`, email, password,
     address: 'QA only', dateOfBirth: '2000-01-01T00:00:00Z', sex: true }
@@ -94,7 +96,7 @@ try {
     for (const name of await readdir(maildrop)) {
       if (!name.startsWith('verify-')) continue
       const body = await readFile(path.join(maildrop, name), 'utf8')
-      if (body.includes(`To: ${email}`)) return body
+      if (body.includes(`To: ${email}`)) { verificationMailPath = path.join(maildrop, name); return body }
     }
     return null
   }, 'Verification mail')
@@ -158,6 +160,9 @@ try {
   const hiddenUi = `(() => { const text=document.querySelector('section')?.innerText || ''; return text.includes('Đã nộp bài') && text.includes('Kết quả chưa được phép xem.') && !/Điểm:|Thời lượng:|Đạt|Chưa đạt|Option one|Option two/.test(text) })()`
   const visibleUi = `document.body.innerText.includes('Đã nộp bài') && document.body.innerText.includes('Điểm: 5') && document.body.innerText.includes('Thời lượng:')`
   await eventually(() => cdp.eval(hiddenResult ? hiddenUi : visibleUi), 'Result UI')
+  const reviewBeforeEnd = await cdp.eval(`(async () => { const client=(await import('/src/api/axiosClient.js')).default;
+    try { await client.get('/attempts/${attemptId}/review'); return 200 } catch (error) { return error.response?.status } })()`)
+  if (reviewBeforeEnd !== 403) throw new Error(`Review before schedule end: ${reviewBeforeEnd}`)
   if (hiddenResult) {
     const raw = await cdp.eval(`(async () => { const client=(await import('/src/api/axiosClient.js')).default;
       return { get:(await client.get('/attempts/${attemptId}')).data,
@@ -168,6 +173,25 @@ try {
           /"(totalMark|isPassed|timeTakenSeconds|isCorrect|point|sourceAnswerId|sourceQuestionId|snapshotJson|draftJson|answersJson)"/i.test(JSON.stringify(response)))
         throw new Error('Hidden result API response contains grading data')
     }
+  }
+  sql(`UPDATE dbo.Questions SET Content=N'Changed source ${tag}' WHERE Id=${fixture[2]};
+    UPDATE dbo.Answers SET Content=N'Changed option',IsCorrect=CASE WHEN IsCorrect=1 THEN 0 ELSE 1 END WHERE QuestionId=${fixture[2]};
+    UPDATE dbo.ExamSchedules SET EndTime=DATEADD(second,-1,SYSUTCDATETIME()) WHERE Id=${fixture[3]};`)
+  const reviewAfterEnd = await cdp.eval(`(async () => { const client=(await import('/src/api/axiosClient.js')).default;
+    try { return {status:200,body:(await client.get('/attempts/${attemptId}/review')).data} }
+    catch (error) { return {status:error.response?.status,body:error.response?.data} } })()`)
+  if (hiddenResult) {
+    if (reviewAfterEnd.status !== 403 || /isCorrect|selectedAnswerIds/.test(JSON.stringify(reviewAfterEnd.body)))
+      throw new Error('Hidden result review response leaked grading data')
+  } else {
+    const question = reviewAfterEnd.body?.data?.questions?.[0]
+    if (reviewAfterEnd.status !== 200 || question?.content !== `Browser question ${tag}` ||
+        question?.options?.[0]?.content !== 'Option one' || question?.options?.[0]?.isCorrect !== true ||
+        question?.selectedAnswerIds?.length !== 1)
+      throw new Error('Review did not use immutable attempt snapshot')
+    await eventually(() => cdp.eval(`[...document.querySelectorAll('button')].some(x => x.innerText === 'Xem lại bài')`), 'Review button')
+    await cdp.eval(`[...document.querySelectorAll('button')].find(x => x.innerText === 'Xem lại bài').click()`)
+    await eventually(() => cdp.eval(`document.body.innerText.includes('Option one') && document.body.innerText.includes('Browser question ${tag}')`), 'Snapshot review UI')
   }
   await cdp.eval(`window.history.pushState({}, '', '/student/schedules'); window.dispatchEvent(new PopStateEvent('popstate'))`)
   await eventually(() => cdp.eval(`[...document.querySelectorAll('tr[data-row-key]')].some(x => x.innerText.includes('Browser ${tag}') && x.innerText.includes('Xem lượt gần nhất'))`), 'Post-exam schedule link')
@@ -208,6 +232,20 @@ try {
       DELETE dbo.ExamDetailQuestions WHERE ExamDetailId IN (SELECT Id FROM dbo.ExamDetails WHERE ExamId=${exam});
       DELETE dbo.Answers WHERE QuestionId=${question}; DELETE dbo.Questions WHERE Id=${question};
       DELETE dbo.ExamDetails WHERE ExamId=${exam}; DELETE dbo.Exams WHERE Id=${exam};`)
+  }
+  if (email && /^attemptbrowser[a-f0-9]{10}@example\.invalid$/.test(email)) {
+    sql(`DECLARE @qa uniqueidentifier=(SELECT Id FROM dbo.Users WHERE Email=N'${email}');
+      IF @qa IS NOT NULL BEGIN
+        DELETE dbo.RefreshTokens WHERE UserId=@qa;
+        DELETE dbo.EmailVerificationTokens WHERE UserId=@qa;
+        DELETE dbo.UserPermissions WHERE UserId=@qa;
+        DELETE dbo.Users WHERE Id=@qa;
+      END;`)
+    if (sql(`SELECT COUNT(*) FROM dbo.Users WHERE Email=N'${email}';`) !== '0')
+      throw new Error('Browser QA user cleanup failed')
+  }
+  if (verificationMailPath && path.resolve(verificationMailPath).startsWith(path.resolve('..', 'DACN_Project', 'Project.Api', '.maildrop') + path.sep)) {
+    try { await rm(verificationMailPath, { force: true }) } catch { /* QA mail only */ }
   }
   socket?.close()
   chrome.kill()
