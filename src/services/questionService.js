@@ -8,3 +8,17 @@ export const deleteQuestion = async (id) => readPayload(await axiosClient.delete
 export const getQuestionTypes = async () => readPayload(await axiosClient.get('/question-types'))
 export const getQuestionLevels = async () => readPayload(await axiosClient.get('/question-levels'))
 export const getQuestionSubjects = async () => readPayload(await axiosClient.get('/questions/subjects'))
+export const importQuestions = async (file) => {
+  const data = new FormData()
+  data.append('file', file)
+  return readPayload(await axiosClient.post('/questions/import', data, { headers: { 'Content-Type': undefined } }))
+}
+export const downloadQuestionTemplate = async () => {
+  const response = await axiosClient.get('/questions/import/template', { responseType: 'blob' })
+  const url = URL.createObjectURL(response.data)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = 'dacn-questions-v1.xlsx'
+  anchor.click()
+  URL.revokeObjectURL(url)
+}

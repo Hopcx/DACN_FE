@@ -21,7 +21,8 @@ export default function LoginPage() {
     setError('')
     try {
       const user = await login(emailOrPhone.trim(), password)
-      navigate(String(user.levelId) === '4' ? ROUTES.myClasses : ROUTES.adminDashboard, { replace: true })
+      navigate(String(user.levelId) === '4' ? ROUTES.myClasses
+        : String(user.levelId) === '3' ? ROUTES.teacherClasses : ROUTES.adminDashboard, { replace: true })
     } catch (failure) {
       setError(getApiError(failure))
     } finally {
@@ -68,15 +69,6 @@ export default function LoginPage() {
             />
           </div>
 
-          <div className="auth-forgot">
-            <a
-              className="auth-forgot__link"
-              href="#"
-              onClick={(e) => e.preventDefault()}
-            >
-              Quên mật khẩu?
-            </a>
-          </div>
 
           <div className="auth-actions">
             <Button type="submit" variant="primary" className="auth-submit" disabled={pending}>
@@ -90,13 +82,6 @@ export default function LoginPage() {
               ĐĂNG KÍ
             </Link>
 
-            <button
-              type="button"
-              className="ui-button ui-button--outline auth-google-btn"
-              onClick={() => {}}
-            >
-              Google
-            </button>
           </div>
         </form>
       </div>
