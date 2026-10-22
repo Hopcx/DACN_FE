@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Alert, Button, Card, Checkbox, Radio, Space, Typography } from 'antd'
 import { getApiError } from '../../api/response'
-import { getAttempt, getAttemptReview, saveAttempt, submitAttempt } from '../../services/attemptService'
+import { getAttempt, getAttemptReview, getVisibilityCount, recordVisibilityHidden,
+  saveAttempt, submitAttempt } from '../../services/attemptService'
 
 const toDraft = (answers = []) => Object.fromEntries(answers.map((x) => [x.questionId, x.selectedAnswerIds]))
 const payload = (questions, choices) => questions.map((q) => ({ questionId: q.id, selectedAnswerIds: choices[q.id] || [] }))
@@ -17,19 +18,54 @@ export default function StudentAttemptPage() {
   const [error, setError] = useState('')
   const [, setTick] = useState(0)
   const [serverClock, setServerClock] = useState(null)
+  const [visibilityCount, setVisibilityCount] = useState(null)
 
   const load = useCallback(async () => {
     setError('')
     try {
       const data = await getAttempt(id)
       setAttempt(data)
+      if (data.state !== 'inProgress') sessionStorage.removeItem(`attempt-visibility-pending:${id}`)
       setReview(null)
       setChoices(toDraft(data.savedAnswers))
       setDirty(false)
       setServerClock({ now: Date.parse(data.serverNow), at: performance.now() })
+      setVisibilityCount((await getVisibilityCount(id)).count)
     } catch (failure) { setError(getApiError(failure)) }
   }, [id])
   useEffect(() => { load() }, [load])
+  useEffect(() => {
+    if (attempt?.state !== 'inProgress') return undefined
+    const key = `attempt-visibility-pending:${id}`
+    let sending = false
+    const pendingEvents = () => {
+      try { return JSON.parse(sessionStorage.getItem(key) || '[]') }
+      catch { return [] }
+    }
+    async function flush() {
+      if (sending) return
+      sending = true
+      try {
+        let pending = pendingEvents()
+        while (pending.length > 0) {
+          const result = await recordVisibilityHidden(id, pending[0])
+          pending = pendingEvents().filter((eventId) => eventId !== pending[0])
+          sessionStorage.setItem(key, JSON.stringify(pending))
+          setVisibilityCount(result.count)
+        }
+      } catch { /* Retry on return or reload; a closed attempt rejects late events. */ }
+      finally { sending = false }
+    }
+    function onVisibility() {
+      if (document.visibilityState === 'hidden') {
+        sessionStorage.setItem(key, JSON.stringify([...pendingEvents(), crypto.randomUUID()]))
+        void flush()
+      } else void flush()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    void flush()
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [id, attempt?.state])
   useEffect(() => {
     const timer = window.setInterval(() => setTick((x) => x + 1), 1000)
     return () => window.clearInterval(timer)
@@ -81,6 +117,7 @@ export default function StudentAttemptPage() {
     <div className="my-4"><Button onClick={load} disabled={busy}>Tải lại từ máy chủ</Button></div>
     {attempt && <>
       <Typography.Paragraph>Trạng thái: {attempt.state} · Còn {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')} · Bản nháp #{attempt.revision}{dirty ? ' (chưa lưu)' : ''}</Typography.Paragraph>
+      <Typography.Paragraph>Số lần rời tab đã ghi nhận: {visibilityCount ?? 'đang tải'}</Typography.Paragraph>
       {attempt.state === 'inProgress' ? <>
         {attempt.questions.map((question, index) => <Card key={question.id} title={`Câu ${index + 1}`} className="mb-4">
           <Typography.Paragraph>{question.content}</Typography.Paragraph>

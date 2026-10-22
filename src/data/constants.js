@@ -7,6 +7,8 @@ export const ROUTES = {
   selectRole: '/auth/register/role',
   adminDashboard: '/admin/dashboard',
   profile: '/admin/profile',
+  teacherProfile: '/teacher/profile',
+  studentProfile: '/student/profile',
   users: '/admin/users',
   levels: '/admin/levels',
   permissions: '/admin/permissions',
@@ -18,5 +20,6 @@ export const ROUTES = {
   exams: '/admin/exams',
   schedules: '/admin/schedules',
   myClasses: '/student/classes',
+  teacherClasses: '/teacher/classes',
   mySchedules: '/student/schedules',
 }
