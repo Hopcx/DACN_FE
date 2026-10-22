@@ -12,23 +12,26 @@ export default function DashboardLayout() {
   const [logoutError, setLogoutError] = useState('')
   const [logoutPending, setLogoutPending] = useState(false)
   const user = useSelector((state) => state.auth.user)
+  const profileRoute = String(user?.levelId) === '3' ? ROUTES.teacherProfile
+    : String(user?.levelId) === '4' ? ROUTES.studentProfile : ROUTES.profile
 
-  const navItems = String(user?.levelId) === '4' ? [
+  const navItems = String(user?.levelId) === '3' ? [
+    { to: ROUTES.teacherClasses, label: 'Lớp của tôi', icon: 'C' },
+    { to: profileRoute, label: 'Hồ sơ của tôi', icon: 'P' },
+  ] : String(user?.levelId) === '4' ? [
     { to: ROUTES.myClasses, label: 'Lớp học của tôi', icon: 'S' },
     { to: ROUTES.mySchedules, label: 'Lịch thi của tôi', icon: 'L' },
     { to: '/student/attempts', label: 'Lịch sử làm bài', icon: 'K' },
-    { to: ROUTES.profile, label: 'Hồ sơ của tôi', icon: 'P' },
+    { to: profileRoute, label: 'Hồ sơ của tôi', icon: 'P' },
   ] : [
     { to: '/admin/dashboard', label: 'Trang chủ', icon: 'H' },
     ...((user?.permissions || []).some((id) => String(id) === '4') ? [{ to: ROUTES.schedules, label: 'Quản lý Lịch Thi', icon: 'L' }] : []),
     ...(String(user?.levelId) === '1' ? [{ to: ROUTES.classes, label: 'Quản lý Lớp Học', icon: 'C' }] : []),
     ...((user?.permissions || []).some((id) => String(id) === '1') ? [{ to: ROUTES.exams, label: 'Quản lý Đề Thi', icon: 'E' }] : []),
-    { to: '/admin/dashboard', label: 'Bài Thi', icon: 'T' },
     ...((user?.permissions || []).some((id) => String(id) === '2') ? [{ to: ROUTES.questions, label: 'Ngân hàng Câu Hỏi', icon: 'Q' }] : []),
     ...((user?.permissions || []).some((id) => String(id) === '3') ? [{ to: ROUTES.subjects, label: 'Quản lý Môn Học', icon: 'M' }] : []),
     ...((user?.permissions || []).some((id) => String(id) === '4') ? [{ to: ROUTES.rooms, label: 'Quản lý Phòng Thi', icon: 'R' }] : []),
-    ...(String(user?.levelId) === '4' ? [{ to: ROUTES.myClasses, label: 'Lớp học của tôi', icon: 'S' }] : []),
-    { to: ROUTES.profile, label: 'Hồ sơ của tôi', icon: 'P' },
+    { to: profileRoute, label: 'Hồ sơ của tôi', icon: 'P' },
     ...(String(user?.levelId) === '1' ? [
       { to: ROUTES.users, label: 'Tài khoản', icon: 'U' },
       { to: ROUTES.levels, label: 'Cấp tài khoản', icon: 'V' },

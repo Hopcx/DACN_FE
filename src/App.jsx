@@ -1,7 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 import MainLayout from './components/layout/MainLayout'
 import AuthLayout from './components/layout/AuthLayout'
-import DashboardLayout from './components/layout/DashboardLayout'
+import RequireLevel from './components/auth/RequireLevel'
 import HomePage from './pages/HomePage'
 import NotFoundPage from './pages/NotFoundPage'
 import LoginPage from './pages/auth/LoginPage'
@@ -16,6 +16,7 @@ import CatalogPage from './pages/catalog/CatalogPage'
 import UserPermissionsPage from './pages/catalog/UserPermissionsPage'
 import AdminClassesPage from './pages/classes/AdminClassesPage'
 import StudentClassesPage from './pages/classes/StudentClassesPage'
+import TeacherClassesPage from './pages/classes/TeacherClassesPage'
 import QuestionBankPage from './pages/questions/QuestionBankPage'
 import ExamManagementPage from './pages/exams/ExamManagementPage'
 import AdminSchedulesPage from './pages/schedules/AdminSchedulesPage'
@@ -38,7 +39,7 @@ export default function App() {
       </Route>
 
       <Route element={<RequireAuth />}>
-        <Route path="admin" element={<DashboardLayout />}>
+        <Route path="admin" element={<RequireLevel levels={[1, 2]} />}>
           <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="users" element={<AdminUsersPage />} />
@@ -52,11 +53,16 @@ export default function App() {
           <Route path="exams" element={<ExamManagementPage />} />
           <Route path="schedules" element={<AdminSchedulesPage />} />
         </Route>
-        <Route path="student" element={<DashboardLayout />}>
+        <Route path="student" element={<RequireLevel levels={[4]} />}>
+          <Route path="profile" element={<ProfilePage />} />
           <Route path="classes" element={<StudentClassesPage />} />
           <Route path="schedules" element={<StudentSchedulesPage />} />
           <Route path="attempts/:id" element={<StudentAttemptPage />} />
           <Route path="attempts" element={<StudentAttemptHistoryPage />} />
+        </Route>
+        <Route path="teacher" element={<RequireLevel levels={[3]} />}>
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="classes" element={<TeacherClassesPage />} />
         </Route>
       </Route>
 

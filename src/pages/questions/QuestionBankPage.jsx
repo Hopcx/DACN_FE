@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Alert, Button, Checkbox, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography } from 'antd'
 import { getApiError } from '../../api/response'
-import { createQuestion, deleteQuestion, getQuestionLevels, getQuestions, getQuestionSubjects,
-  getQuestionTypes, updateQuestion } from '../../services/questionService'
+import { createQuestion, deleteQuestion, downloadQuestionTemplate, getQuestionLevels, getQuestions, getQuestionSubjects,
+  getQuestionTypes, importQuestions, updateQuestion } from '../../services/questionService'
 
 const defaultAnswers = () => [{ content: '', isCorrect: false }, { content: '', isCorrect: false }]
 
@@ -21,6 +21,9 @@ export default function QuestionBankPage() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [importFile, setImportFile] = useState(null)
+  const [importErrors, setImportErrors] = useState([])
+  const [importNotice, setImportNotice] = useState('')
 
   const load = useCallback(async () => {
     if (!allowed) return
@@ -73,6 +76,20 @@ export default function QuestionBankPage() {
     catch (failure) { setError(getApiError(failure)) }
   }
 
+  async function upload() {
+    if (!importFile) return
+    setSaving(true); setError(''); setImportErrors([]); setImportNotice('')
+    try {
+      const result = await importQuestions(importFile)
+      setImportNotice(`Đã nhập ${result.imported} câu hỏi.`)
+      setImportFile(null)
+      await load()
+    } catch (failure) {
+      setError(getApiError(failure))
+      setImportErrors(failure.response?.data?.data?.errors || [])
+    } finally { setSaving(false) }
+  }
+
   if (!allowed) return <Alert type="error" message="Bạn không có quyền quản lý câu hỏi." />
   const label = (items, id) => items.find((x) => x.id === id)?.name || id
   const choices = (items) => items.filter((x) => x.status === true || x.status === 1 || x.status == null)
@@ -81,6 +98,7 @@ export default function QuestionBankPage() {
   return <section className="p-6">
     <Typography.Title level={2}>Ngân hàng câu hỏi</Typography.Title>
     {error && <Alert type="error" showIcon message={error} className="mb-4" />}
+    {importNotice && <Alert type="success" showIcon message={importNotice} className="mb-4" />}
     <Space wrap className="mb-4">
       <Input.Search placeholder="Tìm nội dung" allowClear onSearch={(textSearch) => setFilters((old) => ({ ...old, textSearch: textSearch.trim() || undefined }))} />
       <Select allowClear placeholder="Môn học" style={{ minWidth: 160 }} options={choices(subjects)}
@@ -92,6 +110,18 @@ export default function QuestionBankPage() {
       <Button type="primary" onClick={() => showForm(null)}>Thêm câu hỏi</Button>
       <Button onClick={load}>Tải lại</Button>
     </Space>
+    <Space wrap className="mb-4">
+      <Button onClick={() => downloadQuestionTemplate().catch((failure) => setError(getApiError(failure)))}>Tải mẫu Excel v1</Button>
+      <input type="file" accept=".xlsx" aria-label="Chọn file câu hỏi Excel" onChange={(event) => {
+        setImportFile(event.target.files?.[0] || null); setImportErrors([])
+      }} />
+      <Button type="primary" disabled={!importFile} loading={saving} onClick={upload}>Nhập câu hỏi</Button>
+    </Space>
+    {importErrors.length > 0 && <Table rowKey={(_, index) => index} size="small" pagination={{ pageSize: 10 }}
+      dataSource={importErrors} columns={[
+        { title: 'Dòng', dataIndex: 'row' }, { title: 'Cột', dataIndex: 'column' },
+        { title: 'Mã lỗi', dataIndex: 'code' }, { title: 'Chi tiết', dataIndex: 'message' },
+      ]} />}
     <Table rowKey="id" loading={loading} dataSource={questions} pagination={{ pageSize: 10 }}
       locale={{ emptyText: 'Chưa có câu hỏi' }} columns={[
         { title: 'Nội dung', dataIndex: 'content' },

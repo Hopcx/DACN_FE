@@ -10,3 +10,5 @@ export const getMyLegacySubmissions = async (page = 1, pageSize = 10) =>
   readPayload(await axiosClient.get('/legacy-submissions/mine', { params: { page, pageSize } }))
 export const saveAttempt = async (id, revision, answers) => readPayload(await axiosClient.put(`/attempts/${id}/answers`, { revision, answers }))
 export const submitAttempt = async (id, revision) => readPayload(await axiosClient.post(`/attempts/${id}/submit`, { revision }))
+export const getVisibilityCount = async (id) => readPayload(await axiosClient.get(`/attempts/${id}/visibility-count`))
+export const recordVisibilityHidden = async (id, eventId) => readPayload(await axiosClient.post(`/attempts/${id}/visibility-hidden`, { eventId }))
