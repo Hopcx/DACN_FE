@@ -1,5 +1,4 @@
 import { Route, Routes } from 'react-router-dom'
-import MainLayout from './components/layout/MainLayout'
 import AuthLayout from './components/layout/AuthLayout'
 import RequireLevel from './components/auth/RequireLevel'
 import HomePage from './pages/HomePage'
@@ -9,6 +8,7 @@ import RegisterPage from './pages/auth/RegisterPage'
 import VerifyEmailPage from './pages/auth/VerifyEmailPage'
 import SelectRolePage from './pages/auth/SelectRolePage'
 import AdminDashboardPage from './pages/dashboard/AdminDashboardPage'
+import AdminAttemptsPage from './pages/dashboard/AdminAttemptsPage'
 import RequireAuth from './components/auth/RequireAuth'
 import ProfilePage from './pages/account/ProfilePage'
 import AdminUsersPage from './pages/account/AdminUsersPage'
@@ -27,9 +27,7 @@ import StudentAttemptHistoryPage from './pages/attempts/StudentAttemptHistoryPag
 export default function App() {
   return (
     <Routes>
-      <Route element={<MainLayout />}>
-        <Route path="/" element={<HomePage />} />
-      </Route>
+      <Route path="/" element={<HomePage />} />
 
       <Route path="auth" element={<AuthLayout />}>
         <Route path="login" element={<LoginPage />} />
@@ -41,6 +39,7 @@ export default function App() {
       <Route element={<RequireAuth />}>
         <Route path="admin" element={<RequireLevel levels={[1, 2]} />}>
           <Route path="dashboard" element={<AdminDashboardPage />} />
+          <Route path="attempts" element={<AdminAttemptsPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="levels" element={<CatalogPage kind="levels" />} />

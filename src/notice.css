@@ -1,0 +1,10 @@
+/* Hộp thông báo: vàng = cảnh báo, đỏ = lỗi nghiêm trọng, xanh = thành công */
+.ant-notification .notice { border-radius: 12px; border: 1px solid; box-shadow: 0 10px 30px rgba(15, 42, 68, .18); min-width: 340px; }
+.ant-notification .ant-notification-notice.notice--warning { background: #fffbe6 !important; border-color: #ffd666; }
+.ant-notification .notice--warning .ant-notification-notice-title { color: #ad6800; font-weight: 700; }
+.ant-notification .ant-notification-notice.notice--error { background: #fff1f0 !important; border-color: #ff7875; }
+.ant-notification .notice--error .ant-notification-notice-title { color: #a8071a; font-weight: 700; }
+.ant-notification .ant-notification-notice.notice--success { background: #f6ffed !important; border-color: #95de64; }
+.ant-notification .notice--success .ant-notification-notice-title { color: #237804; font-weight: 700; }
+.ant-notification .ant-notification-notice.notice--info { background: #e6f4ff !important; border-color: #91caff; }
+.notice__list { margin: 4px 0 0; padding-left: 18px; }

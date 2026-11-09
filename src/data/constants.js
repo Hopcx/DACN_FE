@@ -1,4 +1,4 @@
-export const APP_NAME = 'DACN_FE'
+export const APP_NAME = 'DACN'
 
 export const ROUTES = {
   home: '/',
@@ -15,6 +15,7 @@ export const ROUTES = {
   userPermissions: '/admin/user-permissions',
   subjects: '/admin/subjects',
   rooms: '/admin/rooms',
+  attempts: '/admin/attempts',
   classes: '/admin/classes',
   questions: '/admin/questions',
   exams: '/admin/exams',

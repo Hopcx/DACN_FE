@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Alert, Button, Card, Checkbox, Radio, Space, Typography } from 'antd'
+import PageHeader from '../../components/ui/PageHeader'
 import { getApiError } from '../../api/response'
 import { getAttempt, getAttemptReview, getVisibilityCount, recordVisibilityHidden,
   saveAttempt, submitAttempt } from '../../services/attemptService'
@@ -109,17 +110,28 @@ export default function StudentAttemptPage() {
     finally { setBusy(false) }
   }
 
-  return <section className="p-6">
-    <Typography.Title level={2}>Bài làm</Typography.Title>
-    <Link to="/student/schedules">Lịch thi của tôi</Link>
-    <span> · </span><Link to="/student/attempts">Lịch sử làm bài</Link>
-    {error && <Alert type="error" showIcon title={error} className="my-4" />}
-    <div className="my-4"><Button onClick={load} disabled={busy}>Tải lại từ máy chủ</Button></div>
+  return <section className="page-body">
+    <PageHeader title="Bài làm" />
+    <div className="attempt-links"><Link to="/student/schedules">← Lịch thi của tôi</Link>
+      <span> · </span><Link to="/student/attempts">Lịch sử làm bài</Link>
+      <Button size="small" className="attempt-links__reload" onClick={load} disabled={busy}>Tải lại từ máy chủ</Button></div>
+    {error && <Alert type="error" showIcon title={error} className="page-alert" />}
     {attempt && <>
-      <Typography.Paragraph>Trạng thái: {attempt.state} · Còn {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')} · Bản nháp #{attempt.revision}{dirty ? ' (chưa lưu)' : ''}</Typography.Paragraph>
-      <Typography.Paragraph>Số lần rời tab đã ghi nhận: {visibilityCount ?? 'đang tải'}</Typography.Paragraph>
+      <div className={`attempt-timer ${attempt.state === 'inProgress' && remaining <= 300 ? 'attempt-timer--warn' : ''}`}>
+        <div><div className="attempt-timer__label">Thời gian còn lại (theo máy chủ)</div>
+          <div className="attempt-timer__value">{Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</div></div>
+        <div className="attempt-timer__meta">
+          <span>Trạng thái: {attempt.state}</span>
+          <span>Bản nháp #{attempt.revision}{dirty ? ' · chưa lưu' : ' · đã lưu'}</span>
+          <span>Số lần rời tab: {visibilityCount ?? 'đang tải'}</span>
+        </div>
+      </div>
       {attempt.state === 'inProgress' ? <>
-        {attempt.questions.map((question, index) => <Card key={question.id} title={`Câu ${index + 1}`} className="mb-4">
+        <div className="attempt-nav">{attempt.questions.map((question, index) => {
+          const answered = (choices[question.id] || []).length > 0
+          return <a key={question.id} href={`#question-${question.id}`} className={`attempt-nav__item ${answered ? 'is-answered' : ''}`}>{index + 1}</a>
+        })}</div>
+        {attempt.questions.map((question, index) => <Card key={question.id} id={`question-${question.id}`} title={`Câu ${index + 1} / ${attempt.questions.length}`} className="attempt-question">
           <Typography.Paragraph>{question.content}</Typography.Paragraph>
           {question.questionTypeId === 3
             ? <Checkbox.Group disabled={busy || remaining === 0} value={choices[question.id] || []}
@@ -130,8 +142,9 @@ export default function StudentAttemptPage() {
               </Radio.Group>}
           <div><Button type="link" disabled={busy || remaining === 0} onClick={() => choose(question, [])}>Bỏ chọn</Button></div>
         </Card>)}
-        <Space><Button onClick={save} loading={busy} disabled={!dirty || remaining === 0}>Lưu đáp án</Button>
-          <Button type="primary" onClick={submit} loading={busy}>Nộp bài</Button></Space>
+        <div className="attempt-actions"><span>{dirty ? 'Có thay đổi chưa lưu' : 'Đã lưu bản nháp'}</span>
+          <Space><Button onClick={save} loading={busy} disabled={!dirty || remaining === 0}>Lưu đáp án</Button>
+            <Button type="primary" onClick={submit} loading={busy}>Nộp bài</Button></Space></div>
       </> : <>
         <Alert type="info" showIcon title={attempt.state === 'voided' ? 'Đã hủy' : attempt.state === 'timedOut' ? 'Đã hết thời gian làm bài' : 'Đã nộp bài'}
           description={attempt.state === 'voided' ? 'Kết quả của lượt thi này đã bị hủy.'

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Alert, Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Typography } from 'antd'
+import PageHeader from '../../components/ui/PageHeader'
 import { getApiError } from '../../api/response'
 import { useSelector } from 'react-redux'
 import { levelsApi, permissionsApi, subjectsApi, roomsApi } from '../../services/catalogService'
@@ -42,7 +43,7 @@ export default function CatalogPage({ kind }) {
   const [search, setSearch] = useState('')
   const [subjectsActiveOnly, setSubjectsActiveOnly] = useState(true)
   const allowed = kind === 'levels' || kind === 'permissions' ? String(user?.levelId) === '1'
-    : (user?.permissions || []).some((id) => String(id) === (kind === 'subjects' ? '3' : '4'))
+    : String(user?.levelId) === '1' || (user?.permissions || []).some((id) => String(id) === (kind === 'subjects' ? '3' : '4'))
 
   const load = useCallback(async () => {
     if (!allowed) return
@@ -98,8 +99,8 @@ export default function CatalogPage({ kind }) {
 
   if (!allowed) return <Alert type="error" message="Bạn không có quyền truy cập mục này." />
 
-  return <section className="p-6">
-    <Typography.Title level={2}>{title}</Typography.Title>
+  return <section className="page-body">
+    <PageHeader title={title} />
     {error && <Alert type="error" showIcon message={error} className="mb-4" />}
     <Space className="mb-4">
       {(kind === 'rooms' || kind === 'subjects') && <Input.Search aria-label={`Tìm ${title.toLowerCase()}`}

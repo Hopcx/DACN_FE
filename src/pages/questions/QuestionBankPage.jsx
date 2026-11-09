@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Alert, Button, Checkbox, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography } from 'antd'
+import PageHeader from '../../components/ui/PageHeader'
 import { getApiError } from '../../api/response'
 import { createQuestion, deleteQuestion, downloadQuestionTemplate, getQuestionLevels, getQuestions, getQuestionSubjects,
   getQuestionTypes, importQuestions, updateQuestion } from '../../services/questionService'
@@ -9,7 +10,7 @@ const defaultAnswers = () => [{ content: '', isCorrect: false }, { content: '', 
 
 export default function QuestionBankPage() {
   const user = useSelector((state) => state.auth.user)
-  const allowed = (user?.permissions || []).some((id) => String(id) === '2')
+  const allowed = String(user?.levelId) === '1' || (user?.permissions || []).some((id) => String(id) === '2')
   const [form] = Form.useForm()
   const [questions, setQuestions] = useState([])
   const [types, setTypes] = useState([])
@@ -95,8 +96,8 @@ export default function QuestionBankPage() {
   const choices = (items) => items.filter((x) => x.status === true || x.status === 1 || x.status == null)
     .map((x) => ({ value: x.id, label: x.name }))
 
-  return <section className="p-6">
-    <Typography.Title level={2}>Ngân hàng câu hỏi</Typography.Title>
+  return <section className="page-body">
+    <PageHeader title="Ngân hàng câu hỏi" />
     {error && <Alert type="error" showIcon message={error} className="mb-4" />}
     {importNotice && <Alert type="success" showIcon message={importNotice} className="mb-4" />}
     <Space wrap className="mb-4">

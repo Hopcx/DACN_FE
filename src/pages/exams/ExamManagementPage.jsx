@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Alert, Button, Checkbox, Form, Input, InputNumber, Modal, Select, Space, Table, Typography } from 'antd'
+import PageHeader from '../../components/ui/PageHeader'
 import { getApiError } from '../../api/response'
 import { createExam, createVariant, getExams, getExamSubjects, getQuestionOptions, getVariants, updateExam, updateVariant } from '../../services/examService'
 
 const stateOptions = [{ value: 2, label: 'Nháp' }, { value: 1, label: 'Công khai' }]
 
 export default function ExamManagementPage() {
-  const allowed = (useSelector((state) => state.auth.user?.permissions) || []).some((id) => String(id) === '1')
+  const authUser = useSelector((state) => state.auth.user)
+  const allowed = String(authUser?.levelId) === '1' || (authUser?.permissions || []).some((id) => String(id) === '1')
   const [examForm] = Form.useForm()
   const [variantForm] = Form.useForm()
   const chosenQuestionIds = Form.useWatch('questionIds', variantForm) || []
@@ -88,8 +90,8 @@ export default function ExamManagementPage() {
   if (!allowed) return <Alert type="error" message="Bạn không có quyền quản lý bài thi." />
   const subjectName = (id) => subjects.find((x) => x.id === id)?.name || id
   const questionLabel = (id) => questions.find((x) => x.id === id)?.content || `#${id}`
-  return <section className="p-6">
-    <Typography.Title level={2}>Bài thi và mã đề</Typography.Title>
+  return <section className="page-body">
+    <PageHeader title="Bài thi và mã đề" />
     {error && <Alert type="error" showIcon message={error} className="mb-4" />}
     <Space className="mb-4"><Button type="primary" onClick={() => openExam(null)}>Tạo bài thi</Button><Button onClick={load}>Tải lại</Button></Space>
     <Table rowKey="id" loading={loading} dataSource={exams.filter((x) => x.status !== 255)} pagination={{ pageSize: 10 }}

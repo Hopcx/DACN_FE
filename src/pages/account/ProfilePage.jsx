@@ -5,6 +5,7 @@ import { logout } from '../../services/authService'
 import { getApiError } from '../../api/response'
 import { ROUTES } from '../../data/constants'
 import './account.css'
+import PageHeader from '../../components/ui/PageHeader'
 
 export default function ProfilePage() {
   const navigate = useNavigate()
@@ -46,7 +47,7 @@ export default function ProfilePage() {
   }
 
   return <section className="account-page">
-    <h1>Hồ sơ của tôi</h1>
+    <PageHeader title="Hồ sơ của tôi" description="Cập nhật thông tin cá nhân và mật khẩu." />
     {error && <p role="alert" className="account-error">{error}</p>}
     {message && <p role="status">{message}</p>}
     {!profile && !error && <p>Đang tải hồ sơ...</p>}

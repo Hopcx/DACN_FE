@@ -1,54 +1,68 @@
 import { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
-import { getRooms } from '../../services/roomService'
-import { getApiError } from '../../api/response'
+import { Link } from 'react-router-dom'
+import {
+  BookOutlined, CalendarOutlined, FileTextOutlined, QuestionCircleOutlined, TeamOutlined, UserOutlined,
+} from '@ant-design/icons'
+import PageHeader from '../../components/ui/PageHeader'
+import { getUsers } from '../../services/accountService'
+import { getClasses } from '../../services/classService'
+import { getExams } from '../../services/examService'
+import { getSchedules } from '../../services/scheduleService'
+import { getQuestions } from '../../services/questionService'
+import { subjectsApi } from '../../services/catalogService'
+import { ROUTES } from '../../data/constants'
 import './adminDashboard.css'
-import AdminAttemptReport from './AdminAttemptReport'
+
+const rows = (data) => (Array.isArray(data) ? data : data?.items || [])
+const total = (data) => (Number.isInteger(data?.totalCount) ? data.totalCount : rows(data).length)
+
+const CARDS = [
+  { key: 'students', label: 'Tổng số học viên', icon: <UserOutlined />, color: '#ffa726', to: ROUTES.users },
+  { key: 'classes', label: 'Tổng số lớp học', icon: <TeamOutlined />, color: '#c29b6e', to: ROUTES.classes },
+  { key: 'exams', label: 'Tổng số bài thi', icon: <FileTextOutlined />, color: '#26c6a0', to: ROUTES.exams },
+  { key: 'schedules', label: 'Tổng số lịch thi', icon: <CalendarOutlined />, color: '#ff4d5a', to: ROUTES.schedules },
+  { key: 'questions', label: 'Tổng số câu hỏi', icon: <QuestionCircleOutlined />, color: '#e88fc0', to: ROUTES.questions },
+  { key: 'subjects', label: 'Tổng số môn học', icon: <BookOutlined />, color: '#8ec9f5', to: ROUTES.subjects },
+]
 
 export default function AdminDashboardPage() {
   const user = useSelector((state) => state.auth.user)
-  const canReadRooms = (user?.permissions || []).some((id) => String(id) === '4')
-  const [page, setPage] = useState(1)
-  const [rooms, setRooms] = useState(null)
-  const [error, setError] = useState('')
+  const [stats, setStats] = useState({})
 
   useEffect(() => {
-    if (!canReadRooms) return
     let active = true
-    getRooms(page)
-      .then((result) => { if (active) { setRooms(result); setError('') } })
-      .catch((failure) => { if (active) { setRooms(null); setError(getApiError(failure)) } })
+    const jobs = {
+      students: getUsers().then((data) => rows(data).filter((item) => Number(item.levelId) === 4).length),
+      classes: getClasses().then((data) => total(data)),
+      exams: getExams().then((data) => total(data)),
+      schedules: getSchedules().then((data) => total(data)),
+      questions: getQuestions().then((data) => total(data)),
+      subjects: subjectsApi.list().then((data) => total(data)),
+    }
+    Object.entries(jobs).forEach(([key, job]) => {
+      // Mỗi thẻ độc lập: một API lỗi hoặc không có quyền chỉ làm thẻ đó hiện "–".
+      job.then((value) => active && setStats((current) => ({ ...current, [key]: value })))
+        .catch(() => active && setStats((current) => ({ ...current, [key]: null })))
+    })
     return () => { active = false }
-  }, [canReadRooms, page])
+  }, [])
 
   return (
     <section className="admin-dashboard">
-      <h1 className="admin-dashboard__title">TỔNG QUAN</h1>
-      <p className="admin-dashboard__hint">Xin chào, {user?.userName || 'người dùng'}.</p>
-      <AdminAttemptReport />
-      <h2 className="admin-dashboard__title">Phòng thi</h2>
-      {!canReadRooms && <p>Bạn không có quyền xem danh sách phòng thi.</p>}
-      {canReadRooms && error && <p role="alert">{error}</p>}
-      {canReadRooms && !error && !rooms && <p>Đang tải phòng thi...</p>}
-      {canReadRooms && rooms?.items.length === 0 && <p>Chưa có phòng thi.</p>}
-      {canReadRooms && rooms?.items.length > 0 && (
-        <>
-          <ul className="room-list">
-            {rooms.items.map((room) => (
-              <li key={room.id} className="room-card">
-                <strong>{room.name}</strong>
-                <span>{room.address}</span>
-                <span>Sức chứa: {room.capacity}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="room-pagination">
-            <button type="button" disabled={page <= 1} onClick={() => setPage(page - 1)}>Trước</button>
-            <span>Trang {page} · {rooms.totalCount} phòng</span>
-            <button type="button" disabled={page * rooms.pageSize >= rooms.totalCount} onClick={() => setPage(page + 1)}>Sau</button>
-          </div>
-        </>
-      )}
+      <PageHeader title="Tổng quan"
+        description={`Xin chào, ${user?.fullName || user?.userName || 'người dùng'}. Đây là số liệu chung của hệ thống.`} />
+      <div className="overview-grid">
+        {CARDS.map((card) => (
+          <Link key={card.key} to={card.to} className="admin-stat-card">
+            <span className="admin-stat-card__icon" style={{ background: card.color }} aria-hidden="true">{card.icon}</span>
+            <span>
+              <strong className="admin-stat-card__value">{stats[card.key] === undefined ? '…' : stats[card.key] ?? '–'}</strong>
+              <span className="admin-stat-card__label">{card.label}</span>
+            </span>
+          </Link>
+        ))}
+      </div>
     </section>
   )
 }

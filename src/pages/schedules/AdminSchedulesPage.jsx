@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Alert, Button, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography } from 'antd'
+import PageHeader from '../../components/ui/PageHeader'
 import { getApiError } from '../../api/response'
 import {
   assignScheduleClass, createSchedule, deleteSchedule, getScheduleAssignments,
@@ -14,7 +15,8 @@ const statusOptions = [{ value: 2, label: 'Nháp' }, { value: 1, label: 'Hoạt 
 const canChange = canChangeSchedule
 
 export default function AdminSchedulesPage() {
-  const allowed = (useSelector((state) => state.auth.user?.permissions) || []).some((id) => String(id) === '4')
+  const authUser = useSelector((state) => state.auth.user)
+  const allowed = String(authUser?.levelId) === '1' || (authUser?.permissions || []).some((id) => String(id) === '4')
   const [form] = Form.useForm()
   const [assignmentForm] = Form.useForm()
   const [rows, setRows] = useState([])
@@ -126,8 +128,8 @@ export default function AdminSchedulesPage() {
 
   const changeReason = scheduleChangeReason
 
-  return <section className="p-6">
-    <Typography.Title level={2}>Quản lý lịch thi</Typography.Title>
+  return <section className="page-body">
+    <PageHeader title="Quản lý lịch thi" />
     <Typography.Paragraph>Nhập và xem giờ theo Asia/Ho_Chi_Minh. Máy chủ lưu lịch mới theo UTC.</Typography.Paragraph>
     {error && <Alert type="error" showIcon title={error} className="mb-4" />}
     {notice && <Alert type="success" showIcon title={notice} className="mb-4" />}
