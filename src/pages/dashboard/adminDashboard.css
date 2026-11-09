@@ -119,3 +119,21 @@
 .attempt-report__filters { margin: 8px 0 20px; }
 .attempt-report__error { margin-bottom: 16px; }
 .attempt-report .admin-stats-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+
+.admin-stats-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin: 16px 0; }
+.admin-stat-card { border-radius: 14px; border-color: #e6ebf1; }
+.admin-stat-card__value { font-size: 26px; font-weight: 700; color: #0f2a44; line-height: 1.3; }
+.admin-stat-card__label { font-size: 13px; color: #64748b; }
+.attempt-report .page-card { margin-top: 16px; }
+.admin-dashboard__rooms { margin-top: 16px; }
+
+/* Thẻ thống kê kiểu bản thiết kế: biểu tượng tròn màu, số lớn */
+.admin-stat-card { padding: 28px 28px; gap: 20px; border-radius: 22px; box-shadow: 0 4px 14px rgba(15, 42, 68, .1); text-decoration: none; color: inherit; transition: transform .15s, box-shadow .15s; }
+.admin-stat-card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(15, 42, 68, .14); text-decoration: none; }
+.admin-stat-card__icon { width: 78px; height: 78px; border-radius: 50%; color: #fff; font-size: 34px; flex-shrink: 0; }
+.admin-stat-card__value { display: block; font-size: 30px; font-weight: 800; color: #2b3340; line-height: 1.1; }
+.admin-stat-card__label { display: block; margin-top: 4px; font-size: 15px; font-weight: 400; color: #5b6676; }
+.admin-stat-card > span:last-child { flex: 1; min-width: 0; text-align: left; }
+.overview-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+@media (max-width: 1100px) { .overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .overview-grid { grid-template-columns: 1fr; } }

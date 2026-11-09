@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { APP_NAME, ROUTES } from '../../data/constants'
+import { ROUTES } from '../../data/constants'
 import Button from '../../components/ui/Button'
 import './auth.css'
 import { login } from '../../services/authService'
-import { getApiError } from '../../api/response'
+import { notifyApiError, notifyWarning } from '../../utils/notify'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -12,19 +12,19 @@ export default function LoginPage() {
   const [emailOrPhone, setEmailOrPhone] = useState('')
   const [password, setPassword] = useState('')
   const [pending, setPending] = useState(false)
-  const [error, setError] = useState('')
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (pending) return
+    if (!emailOrPhone.trim()) return notifyWarning('Vui lòng nhập tên đăng nhập, email hoặc số điện thoại.')
+    if (!password) return notifyWarning('Vui lòng nhập mật khẩu.')
     setPending(true)
-    setError('')
     try {
       const user = await login(emailOrPhone.trim(), password)
       navigate(String(user.levelId) === '4' ? ROUTES.myClasses
         : String(user.levelId) === '3' ? ROUTES.teacherClasses : ROUTES.adminDashboard, { replace: true })
     } catch (failure) {
-      setError(getApiError(failure))
+      notifyApiError(failure)
     } finally {
       setPending(false)
     }
@@ -33,61 +33,47 @@ export default function LoginPage() {
   return (
     <section className="auth-card">
       <div className="auth-form">
-        <div className="auth-brand">
-          <div className="auth-brand__mark" aria-hidden="true">
-            D
-          </div>
-          <div className="auth-brand__name">{APP_NAME}</div>
-        </div>
+        <h1 className="auth-heading">Đăng nhập</h1>
+        <p className="auth-subheading">Chào mừng bạn quay trở lại DACN</p>
 
-        <h1 className="auth-heading">Đăng Nhập</h1>
-        <p className="auth-subheading">Nhập thông tin để tiếp tục</p>
-
-        <form onSubmit={handleSubmit}>
-          {error && <p className="auth-error" role="alert">{error}</p>}
+        <form onSubmit={handleSubmit} noValidate>
           <div className="auth-field">
-            <label className="auth-label">Email/ Số điện thoại</label>
+            <label className="auth-label" htmlFor="login-keyword">Email hoặc số điện thoại</label>
             <input
+              id="login-keyword"
               className="auth-input"
               type="text"
+              placeholder="Nhập tên đăng nhập, email hoặc số điện thoại"
               value={emailOrPhone}
               onChange={(e) => setEmailOrPhone(e.target.value)}
-              required
               autoComplete="username"
             />
           </div>
 
           <div className="auth-field">
-            <label className="auth-label">Mật khẩu</label>
+            <label className="auth-label" htmlFor="login-password">Mật khẩu</label>
             <input
+              id="login-password"
               className="auth-input"
               type="password"
+              placeholder="Nhập mật khẩu của bạn"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
               autoComplete="current-password"
             />
           </div>
 
-
           <div className="auth-actions">
             <Button type="submit" variant="primary" className="auth-submit" disabled={pending}>
-              {pending ? 'ĐANG ĐĂNG NHẬP...' : 'ĐĂNG NHẬP'}
+              {pending ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </Button>
 
-            <Link
-              to={ROUTES.register}
-              className="ui-button ui-button--secondary auth-link-btn"
-            >
-              ĐĂNG KÍ
+            <Link to={ROUTES.register} className="ui-button ui-button--secondary auth-link-btn">
+              Tạo tài khoản mới
             </Link>
-
+            <Link to={ROUTES.home} className="auth-back">← Về trang giới thiệu</Link>
           </div>
         </form>
-      </div>
-
-      <div className="auth-hero" aria-hidden="true">
-        <div className="auth-hero__img" />
       </div>
     </section>
   )

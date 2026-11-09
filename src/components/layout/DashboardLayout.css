@@ -1,98 +1,72 @@
-.dashboard-shell {
-  min-height: 100vh;
-  display: flex;
-  background: #f4f5f7;
-}
+.dashboard-shell { min-height: 100vh; display: flex; background: #f4f6f8; }
 
+/* Thanh bên sáng, nhấn màu xanh ngọc như bản thiết kế */
 .dashboard-sidebar {
-  width: 270px;
-  background: #ffffff;
-  border-right: 1px solid #e5e7eb;
-  padding: 18px 14px;
-  box-sizing: border-box;
+  width: 250px; flex-shrink: 0; background: #fff; color: #334155; border-right: 1px solid #e3e8ee;
+  padding: 14px 0 24px; position: sticky; top: 0; height: 100vh; overflow-y: auto; transition: width .2s ease;
 }
-
-.dashboard-sidebar__brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 18px;
-}
-
+.dashboard-sidebar__brand { display: flex; align-items: center; gap: 12px; padding: 4px 20px 14px; border-bottom: 1px solid #eef1f4; margin-bottom: 8px; }
 .dashboard-logo-mark {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: #0ea5e9;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
+  width: 36px; height: 36px; border-radius: 10px; background: #26a69a; color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
 }
+.dashboard-sidebar__brand-name { font-weight: 800; font-size: 20px; color: #1f2937; line-height: 1.15; }
+.dashboard-sidebar__brand-sub { font-size: 12px; color: #8a97a6; }
 
-.dashboard-sidebar__brand-name {
-  font-weight: 700;
-  color: #111827;
-}
-
-.dashboard-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
+.dashboard-nav { display: flex; flex-direction: column; }
+.dashboard-nav__section { padding-bottom: 6px; }
+.dashboard-nav__title { padding: 12px 22px 4px; font-size: 11px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: #9aa7b5; }
 .dashboard-nav__item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  color: #111827;
-  text-decoration: none;
-  font-weight: 500;
+  display: flex; align-items: center; gap: 14px; padding: 10px 20px; color: #334155; text-decoration: none;
+  font-weight: 500; font-size: 14.5px; border-left: 3px solid transparent;
 }
+.dashboard-nav__item:hover { background: #f1f8f7; color: #1b8a7f; text-decoration: none; }
+.dashboard-nav__item.is-active { background: #e8f5f3; color: #1b8a7f; border-left-color: #26a69a; font-weight: 600; }
+.dashboard-nav__icon { font-size: 18px; width: 22px; display: flex; justify-content: center; }
+.dashboard-nav__label { white-space: nowrap; }
 
-.dashboard-nav__item:hover {
-  background: #f3f4f6;
+.is-collapsed .dashboard-sidebar { width: 68px; }
+.is-collapsed .dashboard-sidebar__brand-text,
+.is-collapsed .dashboard-nav__label, .is-collapsed .dashboard-nav__title { display: none; }
+.is-collapsed .dashboard-nav__item { justify-content: center; padding-inline: 0; }
+.is-collapsed .dashboard-sidebar__brand { justify-content: center; padding-inline: 0; }
+
+.dashboard-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.dashboard-topbar {
+  height: 60px; background: #fff; border-bottom: 1px solid #e3e8ee; display: flex; align-items: center;
+  gap: 12px; padding: 0 24px; position: sticky; top: 0; z-index: 5;
 }
+.dashboard-topbar__spacer { flex: 1; }
+.dashboard-topbar__toggle { border: 0; background: transparent; font-size: 18px; cursor: pointer; color: #475569; width: 36px; height: 36px; border-radius: 8px; }
+.dashboard-topbar__toggle:hover { background: #f1f5f9; }
+.dashboard-user { display: flex; align-items: center; gap: 10px; border: 0; background: transparent; cursor: pointer; padding: 4px 8px; border-radius: 10px; font: inherit; }
+.dashboard-user:hover { background: #f1f5f9; }
+.dashboard-user__info { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.25; }
+.dashboard-user__name { font-weight: 600; font-size: 14px; color: #16263a; }
+.dashboard-user__role { font-size: 12px; color: #64748b; }
+.dashboard-alert { margin: 12px 24px 0; }
+.dashboard-main { flex: 1; padding: 24px; max-width: 1500px; width: 100%; margin: 0 auto; }
 
-.dashboard-nav__item.is-active {
-  background: #eef2ff;
-  color: #3730a3;
+/* Giao diện học viên: thanh điều hướng ngang phía trên */
+.student-shell { min-height: 100vh; background: #f4f6f8; display: flex; flex-direction: column; }
+.student-topbar {
+  position: sticky; top: 0; z-index: 10; height: 62px; background: #fff; border-bottom: 1px solid #e3e8ee;
+  display: flex; align-items: center; gap: 28px; padding: 0 clamp(16px, 4vw, 48px);
 }
-
-.dashboard-nav__icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 10px;
-  background: #f3f4f6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  color: #111827;
+.student-topbar__brand { font-size: 24px; font-weight: 800; color: #26a69a; text-decoration: none; }
+.student-topbar__brand:hover { text-decoration: none; }
+.student-topbar__nav { display: flex; gap: 6px; flex: 1; justify-content: center; }
+.student-topbar__link {
+  display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 8px; color: #334155;
+  font-weight: 600; text-transform: uppercase; font-size: 13px; letter-spacing: .4px; text-decoration: none;
 }
+.student-topbar__link:hover { background: #f1f8f7; color: #1b8a7f; text-decoration: none; }
+.student-topbar__link.is-active { color: #1b8a7f; background: #e8f5f3; }
 
-.dashboard-nav__item.is-active .dashboard-nav__icon {
-  background: #e0e7ff;
-  color: #3730a3;
-}
-
-.dashboard-nav__label {
-  white-space: nowrap;
-}
-
-.dashboard-main {
-  flex: 1;
-  padding: 24px 22px 40px;
-}
-
-.dashboard-logout {
-  margin-top: 20px;
-  padding: 10px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  background: white;
-  cursor: pointer;
+@media (max-width: 820px) {
+  .dashboard-sidebar { width: 68px; }
+  .dashboard-sidebar__brand-text, .dashboard-nav__label, .dashboard-nav__title, .dashboard-user__info { display: none; }
+  .dashboard-nav__item { justify-content: center; padding-inline: 0; }
+  .dashboard-main { padding: 16px; }
+  .student-topbar__link span { display: none; }
 }

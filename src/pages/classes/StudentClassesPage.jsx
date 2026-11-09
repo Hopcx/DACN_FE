@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Alert, Button, Form, Input, Popconfirm, Space, Table, Typography } from 'antd'
+import PageHeader from '../../components/ui/PageHeader'
 import { getApiError } from '../../api/response'
 import { getMyClasses, joinClass, leaveClass } from '../../services/classService'
 
 export default function StudentClassesPage() {
-  const isStudent = String(useSelector((state) => state.auth.user?.levelId)) === '4'
+  const isStudent = ['1', '4'].includes(String(useSelector((state) => state.auth.user?.levelId)))
   const [form] = Form.useForm()
   const [classes, setClasses] = useState([])
   const [loading, setLoading] = useState(true)
@@ -38,8 +39,8 @@ export default function StudentClassesPage() {
   }
 
   if (!isStudent) return <Alert type="error" message="Trang này dành cho học viên." />
-  return <section className="p-6">
-    <Typography.Title level={2}>Lớp học của tôi</Typography.Title>
+  return <section className="page-body">
+    <PageHeader title="Lớp học của tôi" />
     {error && <Alert type="error" showIcon message={error} className="mb-4" />}
     {message && <Alert type="success" showIcon message={message} className="mb-4" />}
     <Form form={form} layout="inline" onFinish={join} className="mb-4">

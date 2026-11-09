@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { createUser, deleteUser, getUser, getUsers, updateUser } from '../../services/accountService'
 import { getApiError } from '../../api/response'
-import { Button, Form, Input, Modal, Popconfirm, Select } from 'antd'
+import { Alert, Button, Form, Input, Modal, Popconfirm, Select, Table } from 'antd'
+import PageHeader from '../../components/ui/PageHeader'
+import PageCard from '../../components/ui/PageCard'
+import StatusTag from '../../components/ui/StatusTag'
 import { levelsApi } from '../../services/catalogService'
 import { resendVerification } from '../../services/authService'
 import './account.css'
@@ -78,23 +81,34 @@ export default function AdminUsersPage() {
   }
 
   if (String(levelId) !== '1') return <p>Bạn không có quyền quản lý tài khoản.</p>
-  return <section className="account-page">
-    <h1>Tài khoản</h1>
-    <Button type="primary" onClick={() => setCreating(true)}>Thêm tài khoản</Button>
-    <Button onClick={() => reload().catch((failure) => setError(getApiError(failure)))}>Tải lại</Button>
-    <Input.Search placeholder="Tìm tên, tên đăng nhập hoặc email" aria-label="Tìm tài khoản" allowClear
-      onSearch={(value) => { setUsers(null); setSearch(value.trim()) }} />
-    {error && <p role="alert" className="account-error">{error}</p>}
-    {message && <p role="status">{message}</p>}
-    {!users && !error && <p>Đang tải tài khoản...</p>}
-    {users?.length === 0 && <p>Chưa có tài khoản.</p>}
-    {users && <ul>{users.map((user) => <li key={user.id}>
-      <button type="button" onClick={() => selectUser(user.id)}>{user.fullName} ({user.userName})</button>
-      <Popconfirm title="Xóa tài khoản này?" onConfirm={() => remove(user.id)}>
-        <Button danger disabled={pending}>Xóa</Button>
-      </Popconfirm>
-    </li>)}</ul>}
-    {selected && <form onSubmit={save} className="account-form">
+  const levelName = (id) => levels.find((level) => level.id === id)?.name || id
+  return <section className="page-body">
+    <PageHeader title="Tài khoản" description="Quản lý tài khoản người dùng trong hệ thống."
+      extra={<><Button onClick={() => reload().catch((failure) => setError(getApiError(failure)))}>Tải lại</Button>
+        <Button type="primary" onClick={() => setCreating(true)}>Thêm tài khoản</Button></>} />
+    {error && <Alert type="error" showIcon title={error} className="page-alert" />}
+    {message && <Alert type="success" showIcon title={message} className="page-alert" />}
+    <PageCard>
+      <div className="page-toolbar">
+        <Input.Search placeholder="Tìm tên, tên đăng nhập hoặc email" aria-label="Tìm tài khoản" allowClear style={{ maxWidth: 380 }}
+          onSearch={(value) => { setUsers(null); setSearch(value.trim()) }} />
+      </div>
+      <Table rowKey="id" loading={!users && !error} dataSource={users || []} locale={{ emptyText: 'Chưa có tài khoản' }}
+        pagination={{ pageSize: 10, showSizeChanger: false }} columns={[
+          { title: 'Họ tên', dataIndex: 'fullName' },
+          { title: 'Tên đăng nhập', dataIndex: 'userName' },
+          { title: 'Email', dataIndex: 'email' },
+          { title: 'Vai trò', dataIndex: 'levelId', render: (id) => levelName(id) },
+          { title: 'Trạng thái', dataIndex: 'status', render: (status) => status === 1 ? <StatusTag tone="success">Hoạt động</StatusTag> : <StatusTag>Không hoạt động</StatusTag> },
+          { title: 'Thao tác', render: (_, user) => <div className="page-actions">
+            <Button size="small" onClick={() => selectUser(user.id)}>Chi tiết</Button>
+            <Popconfirm title="Xóa tài khoản này?" onConfirm={() => remove(user.id)}>
+              <Button size="small" danger disabled={pending}>Xóa</Button>
+            </Popconfirm>
+          </div> },
+        ]} />
+    </PageCard>
+    {selected && <form onSubmit={save} className="account-form page-card">
       <h2>Chi tiết tài khoản</h2>
       <p>ID: {selected.id} · Vai trò: {selected.levelId} · Trạng thái: {selected.status}</p>
       {[

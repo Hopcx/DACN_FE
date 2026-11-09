@@ -1,8 +1,19 @@
-.auth-layout {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 16px;
-  background: linear-gradient(180deg, #f8fafc, #eef2ff);
+.auth-layout { min-height: 100vh; display: grid; grid-template-columns: minmax(340px, 5fr) 6fr; background: #f3f6fa; }
+.auth-intro {
+  background: linear-gradient(160deg, #0f2a44 0%, #12435c 60%, #0e7c86 130%); color: #dbe7f3;
+  padding: 56px 56px; display: flex; flex-direction: column; justify-content: center;
+}
+.auth-intro__brand { display: flex; align-items: center; gap: 12px; font-size: 26px; font-weight: 800; color: #fff; margin-bottom: 36px; }
+.auth-intro__mark { width: 42px; height: 42px; border-radius: 12px; background: #0e7c86; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.auth-intro__eyebrow { margin: 0 0 10px; font-size: 12px; letter-spacing: 1.4px; color: #7fd6cf; }
+.auth-intro__title { margin: 0 0 32px; font-size: 32px; line-height: 1.25; color: #fff; font-weight: 700; max-width: 440px; }
+.auth-intro__list { list-style: none; padding: 0; margin: 0; display: grid; gap: 20px; max-width: 460px; }
+.auth-intro__list li { display: flex; gap: 14px; align-items: flex-start; }
+.auth-intro__icon { width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; background: rgba(255, 255, 255, .12); display: flex; align-items: center; justify-content: center; color: #7fd6cf; font-size: 18px; }
+.auth-intro__list strong { display: block; color: #fff; font-weight: 600; }
+.auth-intro__list span:not(.auth-intro__icon) { display: block; font-size: 13.5px; color: #a9bdd1; }
+.auth-panel { display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+@media (max-width: 900px) {
+  .auth-layout { grid-template-columns: 1fr; }
+  .auth-intro { display: none; }
 }

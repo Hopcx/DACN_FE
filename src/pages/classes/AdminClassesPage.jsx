@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Alert, Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Typography } from 'antd'
+import PageHeader from '../../components/ui/PageHeader'
 import { getApiError } from '../../api/response'
 import { getUsers } from '../../services/accountService'
 import { addClassMember, approveClassMember, createClass, deleteClass, getClassMembers,
@@ -76,8 +77,8 @@ export default function AdminClassesPage() {
 
   if (!isAdmin) return <Alert type="error" message="Bạn không có quyền quản lý lớp." />
   const userName = (id) => users.find((user) => user.id === id)?.fullName || id
-  return <section className="p-6">
-    <Typography.Title level={2}>Quản lý lớp học</Typography.Title>
+  return <section className="page-body">
+    <PageHeader title="Quản lý lớp học" />
     {error && <Alert type="error" showIcon message={error} className="mb-4" />}
     <Space className="mb-4" wrap>
       <Input.Search placeholder="Tìm tên hoặc mã lớp" allowClear onSearch={(value) => setSearch(value.trim())} />
