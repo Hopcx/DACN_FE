@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Alert, Button, Select, Table, Typography } from 'antd'
+import PageHeader from '../../components/ui/PageHeader'
 import { getApiError } from '../../api/response'
 import { getMyAttemptHistory, getMyLegacySubmissions } from '../../services/attemptService'
 import { formatScheduleTime } from '../../services/scheduleTime'
@@ -30,8 +31,8 @@ export default function StudentAttemptHistoryPage() {
   }, [legacyPage])
   useEffect(() => { loadLegacy() }, [loadLegacy])
 
-  return <section className="p-6">
-    <Typography.Title level={2}>Lịch sử làm bài</Typography.Title>
+  return <section className="page-body">
+    <PageHeader title="Lịch sử làm bài" />
     <Typography.Paragraph>Lượt thi DACN mới và bài nộp từ nguồn lịch sử được hiển thị riêng.</Typography.Paragraph>
     {error && <Alert type="error" showIcon title={error} className="mb-4" />}
     <Select allowClear placeholder="Trạng thái" value={state} className="mr-2" style={{ width: 180 }}

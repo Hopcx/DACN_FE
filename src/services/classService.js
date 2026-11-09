@@ -25,3 +25,5 @@ export const lookupTeacherStudent = async (classId, email) => readPayload(await 
 export const addTeacherClassMember = async (classId, email) => readPayload(await axiosClient.post(`/teacher/classes/${classId}/members`, { email }))
 export const approveTeacherClassMember = async (classId, memberId) => readPayload(await axiosClient.post(`/teacher/classes/${classId}/members/${memberId}/approve`))
 export const removeTeacherClassMember = async (classId, memberId) => readPayload(await axiosClient.delete(`/teacher/classes/${classId}/members/${memberId}`))
+export const getTeacherClassSchedules = async (classId) => readPayload(await axiosClient.get(`/teacher/classes/${classId}/schedules`))
+export const getTeacherClassResults = async (classId) => readPayload(await axiosClient.get(`/teacher/classes/${classId}/results`))

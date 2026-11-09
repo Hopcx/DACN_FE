@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Alert, Button, Form, Modal, Popconfirm, Select, Space, Table, Typography } from 'antd'
+import PageHeader from '../../components/ui/PageHeader'
 import { getUsers } from '../../services/accountService'
 import { permissionsApi, userPermissionsApi } from '../../services/catalogService'
 import { getApiError } from '../../api/response'
@@ -55,8 +56,8 @@ export default function UserPermissionsPage() {
   }
 
   if (!isAdmin) return <Alert type="error" message="Bạn không có quyền truy cập mục này." />
-  return <section className="p-6">
-    <Typography.Title level={2}>Gán quyền tài khoản</Typography.Title>
+  return <section className="page-body">
+    <PageHeader title="Gán quyền tài khoản" />
     {error && <Alert type="error" showIcon message={error} className="mb-4" />}
     <Space className="mb-4"><Button type="primary" onClick={() => show(null)}>Gán quyền</Button>
       <Button onClick={load}>Tải lại</Button></Space>

@@ -1,0 +1,40 @@
+/* ---- Student schedule cards ---- */
+.schedule-filter { margin-bottom: 16px; }
+.schedule-empty { display: flex; justify-content: center; padding: 40px; }
+.schedule-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.schedule-card {
+  background: #fff; border: 1px solid #e6ebf1; border-left: 4px solid #cbd5e1; border-radius: 14px; padding: 18px;
+  display: flex; flex-direction: column; gap: 10px; box-shadow: 0 1px 2px rgba(15, 42, 68, .04);
+}
+.schedule-card--open { border-left-color: #16a34a; }
+.schedule-card--upcoming { border-left-color: #2563eb; }
+.schedule-card--unknown { border-left-color: #f59e0b; }
+.schedule-card__title { margin: 0; font-size: 17px; font-weight: 700; color: #0f2a44; }
+.schedule-card__meta { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; color: #475569; font-size: 14px; }
+.schedule-card__meta .anticon { color: #0e7c86; margin-right: 6px; }
+.schedule-card__actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 4px; }
+
+/* ---- Attempt page ---- */
+.attempt-links { display: flex; align-items: center; gap: 4px; margin-bottom: 14px; }
+.attempt-links__reload { margin-left: auto; }
+.attempt-timer {
+  display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+  background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 14px; padding: 14px 20px; margin-bottom: 16px;
+}
+.attempt-timer--warn { background: #fef2f2; border-color: #fecaca; }
+.attempt-timer__label { font-size: 13px; color: #475569; }
+.attempt-timer__value { font-size: 30px; font-weight: 700; color: #0f2a44; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.attempt-timer__meta { display: flex; gap: 18px; flex-wrap: wrap; color: #475569; font-size: 13px; }
+.attempt-nav { display: flex; flex-wrap: wrap; gap: 8px; background: #fff; border: 1px solid #e6ebf1; border-radius: 14px; padding: 14px; margin-bottom: 16px; }
+.attempt-nav__item {
+  width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 10px;
+  border: 1px solid #cbd5e1; color: #334155; text-decoration: none; font-weight: 600; background: #fff;
+}
+.attempt-nav__item:hover { text-decoration: none; border-color: #0e7c86; }
+.attempt-nav__item.is-answered { background: #0e7c86; border-color: #0e7c86; color: #fff; }
+.attempt-question { margin-bottom: 16px; border-radius: 14px; scroll-margin-top: 80px; }
+.attempt-actions {
+  position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  background: #fff; border: 1px solid #e6ebf1; border-radius: 14px; padding: 12px 18px; margin-top: 8px;
+  box-shadow: 0 -4px 16px rgba(15, 42, 68, .08);
+}
