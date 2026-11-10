@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Alert, Button, Input, Modal, Select, Space, Table, Typography } from 'antd'
+import { Alert, Button, Input, Modal, Segmented, Select, Space, Table, Typography } from 'antd'
 import { getApiError } from '../../api/response'
-import { getAttemptReport, getAttemptReportOptions, getLegacySubmissionReport, voidAttempt } from '../../services/attemptReportService'
+import { getAttemptReport, getAttemptReportOptions, getLegacySubmissionReport, getScoreGroups, voidAttempt } from '../../services/attemptReportService'
+import { DistributionChart, GroupedDistributionChart, PassDonutChart, StatusColumnChart } from '../../components/charts'
 import { formatScheduleTime } from '../../services/scheduleTime'
 import PageHeader from '../../components/ui/PageHeader'
 import PageCard from '../../components/ui/PageCard'
@@ -39,6 +40,15 @@ export default function AdminAttemptReport() {
     catch (failure) { setLegacyReport(null); setLegacyError(getApiError(failure)) }
   }, [legacyPage, legacyStatus])
   useEffect(() => { loadLegacy() }, [loadLegacy])
+  const [groupBy, setGroupBy] = useState('exam')
+  const [scoreGroups, setScoreGroups] = useState(null)
+  const [groupsError, setGroupsError] = useState('')
+  const loadGroups = useCallback(async () => {
+    const { examId, classId, subjectId } = filters
+    try { setScoreGroups(await getScoreGroups({ groupBy, examId, classId, subjectId })); setGroupsError('') }
+    catch (failure) { setScoreGroups(null); setGroupsError(getApiError(failure)) }
+  }, [filters, groupBy])
+  useEffect(() => { loadGroups() }, [loadGroups])
   useEffect(() => {
     getAttemptReportOptions().then(setOptions).catch((failure) => setError(getApiError(failure)))
   }, [])
@@ -83,11 +93,46 @@ export default function AdminAttemptReport() {
           <div className="admin-stat-card__label">{label}</div></div>
       </div>)}
     </div>}
+    {summary && <div className="report-charts">
+      <PageCard>
+        <h2 className="page-section-title">Phân bố lượt thi theo trạng thái</h2>
+        <StatusColumnChart data={[
+          { key: 'submitted', label: 'Đã nộp', value: summary.submittedCount },
+          { key: 'inProgress', label: 'Đang làm', value: summary.inProgressCount },
+          { key: 'timedOut', label: 'Hết giờ', value: summary.timeoutCount },
+          { key: 'voided', label: 'Đã hủy', value: summary.voidedCount },
+        ]} />
+      </PageCard>
+      <PageCard>
+        <h2 className="page-section-title">Tỷ lệ kết quả <small>(chỉ lượt đã chốt)</small></h2>
+        <PassDonutChart passed={summary.passedCount} failed={summary.failedCount} />
+      </PageCard>
+    </div>}
     <PageCard>
-    <h2 className="page-section-title">Phổ điểm</h2>
-    <Space wrap>{report?.distribution?.length
-      ? report.distribution.map((bucket) => <span key={bucket.score}>{bucket.score}: {bucket.count} lượt</span>)
-      : 'Chưa có lượt đã chốt'}</Space>
+    <h2 className="page-section-title">Phổ điểm <small>(điểm gốc, theo bộ lọc hiện tại)</small></h2>
+    <DistributionChart data={(report?.distribution || []).map((bucket) => ({ label: String(bucket.score), count: bucket.count }))} />
+    </PageCard>
+    <PageCard>
+    <div className="score-groups__toolbar">
+      <h2 className="page-section-title">Phổ điểm theo nhóm <small>(quy về thang 10)</small></h2>
+      <Segmented value={groupBy} onChange={setGroupBy} options={[
+        { value: 'exam', label: 'Theo bài thi' }, { value: 'class', label: 'Theo lớp' }, { value: 'subject', label: 'Theo môn học' }]} />
+    </div>
+    {groupsError && <Alert type="error" showIcon title={groupsError} className="attempt-report__error" />}
+    <GroupedDistributionChart groups={scoreGroups?.groups} />
+    <Table rowKey="id" size="small" pagination={false} dataSource={scoreGroups?.groups || []}
+      locale={{ emptyText: 'Chưa có lượt đã chốt' }} style={{ marginTop: 12 }}
+      columns={[
+        { title: groupBy === 'exam' ? 'Bài thi' : groupBy === 'class' ? 'Lớp' : 'Môn học', dataIndex: 'name' },
+        { title: 'Lượt đã chốt', dataIndex: 'finalizedCount', align: 'right' },
+        { title: 'Đạt', dataIndex: 'passedCount', align: 'right' },
+        { title: 'Chưa đạt', dataIndex: 'failedCount', align: 'right' },
+        { title: 'Tỷ lệ đạt', dataIndex: 'passPercent', align: 'right', render: (value) => `${value}%` },
+        { title: 'Điểm TB (gốc)', dataIndex: 'averageScore', align: 'right' },
+      ]} />
+    {groupBy === 'class' && <Typography.Paragraph type="secondary" className="dash-note">
+      Một lượt được tính cho lớp khi lịch thi được gán cho lớp và học viên là thành viên đã duyệt của lớp đó.
+    </Typography.Paragraph>}
     </PageCard>
     <PageCard>
     <h2 className="page-section-title">Danh sách lượt thi</h2>
