@@ -137,3 +137,40 @@
 .overview-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
 @media (max-width: 1100px) { .overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .overview-grid { grid-template-columns: 1fr; } }
+
+/* P2 — Tổng quan quản trị theo bản mô phỏng 02 */
+.dash-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin: 8px 0 18px; }
+.dash-kpi { display: flex; flex-direction: column; gap: 6px; padding: 22px; border-radius: 16px; border: 1px solid transparent;
+  text-decoration: none; color: #0f2a44; transition: transform .15s, box-shadow .15s; }
+.dash-kpi:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(15, 42, 68, .12); text-decoration: none; }
+.dash-kpi__icon { font-size: 30px; line-height: 1; margin-bottom: 6px; }
+.dash-kpi__label { font-size: 15px; font-weight: 600; }
+.dash-kpi__value { font-size: 34px; font-weight: 800; line-height: 1.1; }
+.dash-kpi__unit { color: #64748b; font-size: 13px; }
+.dash-kpi__more { margin-top: 8px; font-size: 13px; font-weight: 600; }
+.dash-kpi--blue { background: #eef4ff; border-color: #d6e3ff; } .dash-kpi--blue .dash-kpi__icon, .dash-kpi--blue .dash-kpi__more { color: #2f6fed; }
+.dash-kpi--green { background: #e9f8f3; border-color: #c9eee1; } .dash-kpi--green .dash-kpi__icon, .dash-kpi--green .dash-kpi__more { color: #0f9d8f; }
+.dash-kpi--green .dash-kpi__value { color: #0f2a44; }
+.dash-kpi--orange { background: #fff5e8; border-color: #fde3bf; } .dash-kpi--orange .dash-kpi__icon, .dash-kpi--orange .dash-kpi__more, .dash-kpi--orange .dash-kpi__value { color: #d97706; }
+.dash-kpi--red { background: #fdeeee; border-color: #f8d4d4; } .dash-kpi--red .dash-kpi__icon, .dash-kpi--red .dash-kpi__more, .dash-kpi--red .dash-kpi__value { color: #dc2626; }
+.dash-counts { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.dash-count { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: #fff; border: 1px solid #e6ebf1;
+  border-radius: 12px; color: #0f2a44; text-decoration: none; }
+.dash-count:hover { border-color: #b9cdf5; text-decoration: none; }
+.dash-count__icon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: #eef4ff; color: #2f6fed; font-size: 17px; flex-shrink: 0; }
+.dash-count strong { display: block; font-size: 20px; line-height: 1.2; }
+.dash-count small { color: #64748b; font-size: 12.5px; }
+.dash-charts { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; margin-bottom: 16px; }
+.dash-charts .page-card + .page-card { margin-top: 0; }
+.page-section-title small { font-weight: 400; color: #64748b; font-size: 13px; }
+.dash-note { margin: 8px 0 0; color: #64748b; font-size: 13px; }
+.dash-section-head { display: flex; justify-content: space-between; align-items: baseline; }
+.dash-time { display: flex; flex-direction: column; } .dash-time small { color: #64748b; }
+.dash-fallback { margin-top: 8px; }
+.chart-loading { min-height: 200px; display: grid; place-items: center; }
+.report-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+.report-charts .page-card + .page-card { margin-top: 0; }
+.score-groups__toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+@media (max-width: 1200px) { .dash-counts { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 1000px) { .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dash-charts, .report-charts { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .dash-kpis, .dash-counts { grid-template-columns: 1fr 1fr; } .dash-kpi__value { font-size: 28px; } }
