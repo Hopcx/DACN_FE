@@ -22,5 +22,7 @@ export const ROUTES = {
   schedules: '/admin/schedules',
   myClasses: '/student/classes',
   teacherClasses: '/teacher/classes',
+  teacherOverview: '/teacher/overview',
+  audit: '/admin/audit',
   mySchedules: '/student/schedules',
 }

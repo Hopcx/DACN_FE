@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux'
 import { Avatar, Dropdown } from 'antd'
 import {
   AppstoreOutlined, BankOutlined, BarChartOutlined, BookOutlined, CalendarOutlined, FileTextOutlined,
-  HistoryOutlined, HomeOutlined, KeyOutlined, LogoutOutlined, MenuOutlined, QuestionCircleOutlined,
+  FileSearchOutlined, HistoryOutlined, HomeOutlined, KeyOutlined, LogoutOutlined, MenuOutlined, QuestionCircleOutlined,
   SafetyOutlined, SolutionOutlined, TeamOutlined, UserOutlined,
 } from '@ant-design/icons'
 import { logout } from '../../services/authService'
@@ -34,7 +34,10 @@ export default function DashboardLayout() {
   const profileRoute = level === '3' ? ROUTES.teacherProfile : level === '4' ? ROUTES.studentProfile : ROUTES.profile
   const topNav = level === '4'
 
-  const sections = level === '3' ? [{ items: [{ to: ROUTES.teacherClasses, label: 'Lớp của tôi', icon: <TeamOutlined /> }] }]
+  const sections = level === '3' ? [{ items: [
+      { to: ROUTES.teacherOverview, label: 'Tổng quan', icon: <HomeOutlined /> },
+      { to: ROUTES.teacherClasses, label: 'Lớp của tôi', icon: <TeamOutlined /> },
+    ] }]
     : topNav ? [] : [
       { items: [{ to: '/admin/dashboard', label: 'Trang chủ', icon: <HomeOutlined /> }] },
       { title: 'Quản lý', items: [
@@ -47,13 +50,19 @@ export default function DashboardLayout() {
         ...(can(4) ? [{ to: ROUTES.rooms, label: 'Phòng thi', icon: <BankOutlined /> }] : []),
       ] },
       ...(isAdmin ? [
-        { title: 'Báo cáo', items: [{ to: ROUTES.attempts, label: 'Danh sách bài làm', icon: <BarChartOutlined /> }] },
+        { title: 'Báo cáo', items: [
+          { to: ROUTES.attempts, label: 'Danh sách bài làm', icon: <BarChartOutlined /> },
+          { to: ROUTES.audit, label: 'Nhật ký hệ thống', icon: <FileSearchOutlined /> },
+        ] },
         { title: 'Phân quyền', items: [
           { to: ROUTES.levels, label: 'Cấp tài khoản', icon: <SolutionOutlined /> },
           { to: ROUTES.permissions, label: 'Danh mục quyền', icon: <SafetyOutlined /> },
           { to: ROUTES.userPermissions, label: 'Phân quyền người dùng', icon: <KeyOutlined /> },
         ] },
-        { title: 'Khu vực giảng viên', items: [{ to: ROUTES.teacherClasses, label: 'Lớp và kết quả', icon: <TeamOutlined /> }] },
+        { title: 'Khu vực giảng viên', items: [
+          { to: ROUTES.teacherOverview, label: 'Tổng quan giảng viên', icon: <HomeOutlined /> },
+          { to: ROUTES.teacherClasses, label: 'Lớp và kết quả', icon: <TeamOutlined /> },
+        ] },
         { title: 'Khu vực học viên', items: STUDENT_NAV.map((item) => ({ ...item, label: item.label === 'Lớp' ? 'Lớp học' : item.label })) },
       ] : []),
     ]

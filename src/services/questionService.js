@@ -1,5 +1,6 @@
 import axiosClient from '../api/axiosClient'
 import { readPayload } from '../api/response'
+import { downloadFile } from '../api/download'
 
 export const getQuestions = async (params) => readPayload(await axiosClient.get('/questions', { params }))
 export const createQuestion = async (body) => readPayload(await axiosClient.post('/questions', body))
@@ -22,3 +23,7 @@ export const downloadQuestionTemplate = async () => {
   anchor.click()
   URL.revokeObjectURL(url)
 }
+export const exportQuestions = ({ subjectId, questionTypeId, questionLevelId }) => downloadFile('/questions/export', {
+  params: Object.fromEntries(Object.entries({ subjectId, questionTypeId, questionLevelId }).filter(([, value]) => value != null)),
+  fileName: `dacn-questions-v1-subject-${subjectId}.xlsx`,
+})

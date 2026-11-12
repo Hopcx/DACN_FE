@@ -9,6 +9,8 @@ import VerifyEmailPage from './pages/auth/VerifyEmailPage'
 import SelectRolePage from './pages/auth/SelectRolePage'
 import AdminDashboardPage from './pages/dashboard/AdminDashboardPage'
 import AdminAttemptsPage from './pages/dashboard/AdminAttemptsPage'
+import TeacherOverviewPage from './pages/dashboard/TeacherOverviewPage'
+import AdminAuditPage from './pages/audit/AdminAuditPage'
 import RequireAuth from './components/auth/RequireAuth'
 import ProfilePage from './pages/account/ProfilePage'
 import AdminUsersPage from './pages/account/AdminUsersPage'
@@ -40,6 +42,7 @@ export default function App() {
         <Route path="admin" element={<RequireLevel levels={[1, 2]} />}>
           <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route path="attempts" element={<AdminAttemptsPage />} />
+          <Route path="audit" element={<AdminAuditPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="levels" element={<CatalogPage kind="levels" />} />
@@ -61,6 +64,7 @@ export default function App() {
         </Route>
         <Route path="teacher" element={<RequireLevel levels={[3]} />}>
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="overview" element={<TeacherOverviewPage />} />
           <Route path="classes" element={<TeacherClassesPage />} />
         </Route>
       </Route>

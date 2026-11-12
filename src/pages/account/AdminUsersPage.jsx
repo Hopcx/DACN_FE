@@ -8,6 +8,9 @@ import PageCard from '../../components/ui/PageCard'
 import StatusTag from '../../components/ui/StatusTag'
 import { levelsApi } from '../../services/catalogService'
 import { resendVerification } from '../../services/authService'
+import { downloadAccountTemplate, exportAccounts } from '../../services/accountExcelService'
+import { excelErrorMessage } from '../../services/excelFile'
+import AccountExcelImportModal from './AccountExcelImportModal'
 import './account.css'
 
 export default function AdminUsersPage() {
@@ -18,6 +21,10 @@ export default function AdminUsersPage() {
   const [message, setMessage] = useState('')
   const [pending, setPending] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false)
+  const [exportLevel, setExportLevel] = useState()
   const [search, setSearch] = useState('')
   const [form] = Form.useForm()
   const [levels, setLevels] = useState([])
@@ -73,6 +80,30 @@ export default function AdminUsersPage() {
     finally { setPending(false) }
   }
 
+  async function downloadTemplate() {
+    if (downloadingTemplate) return
+    setDownloadingTemplate(true); setError(''); setMessage('')
+    try { await downloadAccountTemplate() }
+    catch (failure) { setError(excelErrorMessage(failure)) }
+    finally { setDownloadingTemplate(false) }
+  }
+
+  async function exportExcel() {
+    if (exporting) return
+    setExporting(true); setError(''); setMessage('')
+    try { await exportAccounts(exportLevel) }
+    catch (failure) { setError(excelErrorMessage(failure)) }
+    finally { setExporting(false) }
+  }
+
+  function imported(result) {
+    setImporting(false)
+    setMessage(`Đã nhập ${result.imported} tài khoản.${result.emailFailed > 0
+      ? ` ${result.emailFailed} email xác minh gửi lỗi; người dùng dùng "Gửi lại email xác minh".` : ''}`)
+    setError('')
+    reload().catch((failure) => setError(getApiError(failure)))
+  }
+
   async function remove(id) {
     setPending(true); setError(''); setMessage('')
     try { await deleteUser(id); await reload(); if (selected?.id === id) setSelected(null); setMessage('Đã xóa tài khoản.') }
@@ -85,6 +116,8 @@ export default function AdminUsersPage() {
   return <section className="page-body">
     <PageHeader title="Tài khoản" description="Quản lý tài khoản người dùng trong hệ thống."
       extra={<><Button onClick={() => reload().catch((failure) => setError(getApiError(failure)))}>Tải lại</Button>
+        <Button onClick={downloadTemplate} loading={downloadingTemplate} disabled={downloadingTemplate}>Tải mẫu Excel</Button>
+        <Button onClick={() => setImporting(true)}>Nhập từ Excel</Button>
         <Button type="primary" onClick={() => setCreating(true)}>Thêm tài khoản</Button></>} />
     {error && <Alert type="error" showIcon title={error} className="page-alert" />}
     {message && <Alert type="success" showIcon title={message} className="page-alert" />}
@@ -92,6 +125,10 @@ export default function AdminUsersPage() {
       <div className="page-toolbar">
         <Input.Search placeholder="Tìm tên, tên đăng nhập hoặc email" aria-label="Tìm tài khoản" allowClear style={{ maxWidth: 380 }}
           onSearch={(value) => { setUsers(null); setSearch(value.trim()) }} />
+        <Select allowClear placeholder="Vai trò xuất" aria-label="Vai trò xuất" style={{ minWidth: 180 }}
+          value={exportLevel} onChange={setExportLevel}
+          options={levels.filter((level) => level.id >= 1 && level.id <= 4).map((level) => ({ value: level.id, label: level.name }))} />
+        <Button onClick={exportExcel} loading={exporting} disabled={exporting}>Xuất Excel</Button>
       </div>
       <Table rowKey="id" loading={!users && !error} dataSource={users || []} locale={{ emptyText: 'Chưa có tài khoản' }}
         pagination={{ pageSize: 10, showSizeChanger: false }} columns={[
@@ -125,6 +162,7 @@ export default function AdminUsersPage() {
         catch (failure) { setError(getApiError(failure)) }
       }}>Gửi lại email xác minh</Button>
     </form>}
+    {importing && <AccountExcelImportModal open onClose={() => setImporting(false)} onImported={imported} />}
     <Modal title="Thêm tài khoản" open={creating} onCancel={() => setCreating(false)}
       onOk={() => form.submit()} confirmLoading={pending} destroyOnHidden>
       <Form form={form} layout="vertical" onFinish={add}>
