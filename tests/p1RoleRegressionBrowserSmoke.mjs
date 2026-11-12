@@ -247,7 +247,8 @@ try {
 
   // ---- Teacher: lớp của tôi → kết quả lớp
   const teacher = await browser.page()
-  await teacher.login(accounts.teacher, '/teacher/classes')
+  await teacher.login(accounts.teacher, '/teacher/overview')
+  await teacher.go('/teacher/classes')
   await teacher.waitText(className)
   await teacher.eval(`[...document.querySelectorAll('tr')].find((row) => row.innerText.includes(${JSON.stringify(className)})).querySelector('button').click()`)
   await eventually(() => teacher.eval(`(() => { const tab = [...document.querySelectorAll('.ant-tabs-tab-btn')].find((x) => x.innerText.startsWith('Kết quả (')); if (!tab) return false; tab.click(); return true })()`), 'results tab')

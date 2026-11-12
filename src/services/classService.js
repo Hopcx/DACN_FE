@@ -27,3 +27,4 @@ export const approveTeacherClassMember = async (classId, memberId) => readPayloa
 export const removeTeacherClassMember = async (classId, memberId) => readPayload(await axiosClient.delete(`/teacher/classes/${classId}/members/${memberId}`))
 export const getTeacherClassSchedules = async (classId) => readPayload(await axiosClient.get(`/teacher/classes/${classId}/schedules`))
 export const getTeacherClassResults = async (classId) => readPayload(await axiosClient.get(`/teacher/classes/${classId}/results`))
+export const getTeacherOverview = async (params) => readPayload(await axiosClient.get('/teacher/overview', { params }))

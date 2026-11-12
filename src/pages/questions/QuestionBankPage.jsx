@@ -4,7 +4,8 @@ import { Alert, Button, Checkbox, Form, Input, Modal, Popconfirm, Select, Space,
 import PageHeader from '../../components/ui/PageHeader'
 import { getApiError } from '../../api/response'
 import { createQuestion, deleteQuestion, downloadQuestionTemplate, getQuestionLevels, getQuestions, getQuestionSubjects,
-  getQuestionTypes, importQuestions, updateQuestion } from '../../services/questionService'
+  getQuestionTypes, importQuestions, updateQuestion, exportQuestions } from '../../services/questionService'
+import { excelErrorMessage } from '../../services/excelFile'
 
 const defaultAnswers = () => [{ content: '', isCorrect: false }, { content: '', isCorrect: false }]
 
@@ -25,6 +26,8 @@ export default function QuestionBankPage() {
   const [importFile, setImportFile] = useState(null)
   const [importErrors, setImportErrors] = useState([])
   const [importNotice, setImportNotice] = useState('')
+  const [exportErrors, setExportErrors] = useState([])
+  const [exporting, setExporting] = useState(false)
 
   const load = useCallback(async () => {
     if (!allowed) return
@@ -91,6 +94,22 @@ export default function QuestionBankPage() {
     } finally { setSaving(false) }
   }
 
+  function changeExportFilter(patch) {
+    setExportErrors([]); setFilters((old) => ({ ...old, ...patch }))
+  }
+
+  async function exportExcel() {
+    if (!filters.subjectId || exporting) return
+    setExporting(true); setError(''); setExportErrors([])
+    try { await exportQuestions(filters) }
+    catch (failure) {
+      const errors = failure.response?.data?.data?.errors
+      if (failure.response?.status === 409 && Array.isArray(errors)) {
+        setError(failure.response.data.message); setExportErrors(errors)
+      } else setError(excelErrorMessage(failure))
+    } finally { setExporting(false) }
+  }
+
   if (!allowed) return <Alert type="error" message="Bạn không có quyền quản lý câu hỏi." />
   const label = (items, id) => items.find((x) => x.id === id)?.name || id
   const choices = (items) => items.filter((x) => x.status === true || x.status === 1 || x.status == null)
@@ -103,11 +122,11 @@ export default function QuestionBankPage() {
     <Space wrap className="mb-4">
       <Input.Search placeholder="Tìm nội dung" allowClear onSearch={(textSearch) => setFilters((old) => ({ ...old, textSearch: textSearch.trim() || undefined }))} />
       <Select allowClear placeholder="Môn học" style={{ minWidth: 160 }} options={choices(subjects)}
-        onChange={(subjectId) => setFilters((old) => ({ ...old, subjectId }))} />
+        onChange={(subjectId) => changeExportFilter({ subjectId })} />
       <Select allowClear placeholder="Loại" style={{ minWidth: 170 }} options={choices(types).filter((x) => x.value <= 3)}
-        onChange={(questionTypeId) => setFilters((old) => ({ ...old, questionTypeId }))} />
+        onChange={(questionTypeId) => changeExportFilter({ questionTypeId })} />
       <Select allowClear placeholder="Mức độ" style={{ minWidth: 140 }} options={choices(levels)}
-        onChange={(questionLevelId) => setFilters((old) => ({ ...old, questionLevelId }))} />
+        onChange={(questionLevelId) => changeExportFilter({ questionLevelId })} />
       <Button type="primary" onClick={() => showForm(null)}>Thêm câu hỏi</Button>
       <Button onClick={load}>Tải lại</Button>
     </Space>
@@ -117,12 +136,31 @@ export default function QuestionBankPage() {
         setImportFile(event.target.files?.[0] || null); setImportErrors([])
       }} />
       <Button type="primary" disabled={!importFile} loading={saving} onClick={upload}>Nhập câu hỏi</Button>
+      <Popconfirm title="File chứa đáp án đúng và việc xuất được ghi nhật ký. Tiếp tục?" okText="Tiếp tục" cancelText="Hủy"
+        disabled={!filters.subjectId || exporting} onConfirm={exportExcel}>
+        <Button disabled={!filters.subjectId || exporting} loading={exporting}
+          title={filters.subjectId ? undefined : 'Chọn môn học để xuất'}>Xuất Excel v1</Button>
+      </Popconfirm>
     </Space>
+    <Typography.Text type="secondary" className="mb-4 block">
+      Xuất theo môn, loại, mức độ đang lọc; không áp dụng ô tìm nội dung. Câu đã ẩn không được xuất.
+    </Typography.Text>
     {importErrors.length > 0 && <Table rowKey={(_, index) => index} size="small" pagination={{ pageSize: 10 }}
       dataSource={importErrors} columns={[
         { title: 'Dòng', dataIndex: 'row' }, { title: 'Cột', dataIndex: 'column' },
         { title: 'Mã lỗi', dataIndex: 'code' }, { title: 'Chi tiết', dataIndex: 'message' },
       ]} />}
+    {exportErrors.length > 0 && <>
+      <Table rowKey={(_, index) => index} size="small" pagination={{ pageSize: 10 }}
+        dataSource={exportErrors} columns={[
+          { title: 'Câu hỏi', dataIndex: 'questionId', render: (id) => {
+            const content = questions.find((item) => item.id === id)?.content
+            return content ? `#${id} ${content.length > 80 ? `${content.slice(0, 80)}…` : content}` : `#${id}`
+          } },
+          { title: 'Mã lỗi', dataIndex: 'code' }, { title: 'Chi tiết', dataIndex: 'message' },
+        ]} />
+      <Button className="mb-4" onClick={() => setExportErrors([])}>Đóng danh sách lỗi</Button>
+    </>}
     <Table rowKey="id" loading={loading} dataSource={questions} pagination={{ pageSize: 10 }}
       locale={{ emptyText: 'Chưa có câu hỏi' }} columns={[
         { title: 'Nội dung', dataIndex: 'content' },

@@ -56,7 +56,7 @@ export default function HomePage() {
   const user = useSelector((state) => state.auth.user)
   const hasSession = useSelector((state) => Boolean(state.auth.accessToken && state.auth.user))
   const workspace = String(user?.levelId) === '4' ? ROUTES.myClasses
-    : String(user?.levelId) === '3' ? ROUTES.teacherClasses : ROUTES.adminDashboard
+    : String(user?.levelId) === '3' ? ROUTES.teacherOverview : ROUTES.adminDashboard
   const rootRef = useReveal()
 
   return (
