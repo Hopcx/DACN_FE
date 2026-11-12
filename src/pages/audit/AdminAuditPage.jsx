@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux'
 import { Alert, Button, Descriptions, Input, Select, Space, Table, Tabs, Tag, Typography } from 'antd'
 import PageHeader from '../../components/ui/PageHeader'
 import PageCard from '../../components/ui/PageCard'
+import { TableEmpty } from '../../components/ui/PageState'
 import { getAuditLogs, getExamActivity } from '../../services/auditService'
 import { getAttemptReportOptions } from '../../services/attemptReportService'
 import { buildActivityQuery, buildLogQuery } from '../../services/auditFilters'
@@ -108,7 +109,9 @@ function SystemLogTab() {
     <AuditAlerts queryError={queryError} error={error} />
     <PageCard>
       <Table rowKey="id" loading={loading} dataSource={data?.items || []} scroll={{ x: 900 }}
-        locale={{ emptyText: hasFilter(query, applied) ? 'Không có bản ghi khớp bộ lọc' : 'Chưa có nhật ký' }}
+        locale={{ emptyText: <TableEmpty error={Boolean(error || queryError)}
+          errorLabel={queryError ? 'Bộ lọc chưa hợp lệ nên chưa tải dữ liệu.' : 'Không tải được nhật ký. Bấm "Tải lại" để thử lại.'}
+          filtered={hasFilter(query, applied)} emptyLabel="Chưa có nhật ký" /> }}
         pagination={{
           current: page, pageSize, total: data?.totalCount || 0, showSizeChanger: true,
           pageSizeOptions: PAGE_SIZES, onChange,
@@ -181,7 +184,9 @@ function ExamActivityTab() {
     <AuditAlerts queryError={queryError} error={error} warning={optionsError} />
     <PageCard>
       <Table rowKey="id" loading={loading} dataSource={data?.items || []} scroll={{ x: 900 }}
-        locale={{ emptyText: hasFilter(query, applied) ? 'Không có bản ghi khớp bộ lọc' : 'Chưa có nhật ký hoạt động thi' }}
+        locale={{ emptyText: <TableEmpty error={Boolean(error || queryError)}
+          errorLabel={queryError ? 'Bộ lọc chưa hợp lệ nên chưa tải dữ liệu.' : 'Không tải được nhật ký. Bấm "Tải lại" để thử lại.'}
+          filtered={hasFilter(query, applied)} emptyLabel="Chưa có nhật ký hoạt động thi" /> }}
         pagination={{
           current: page, pageSize, total: data?.totalCount || 0, showSizeChanger: true,
           pageSizeOptions: PAGE_SIZES, onChange,
