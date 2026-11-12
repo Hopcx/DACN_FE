@@ -1,0 +1,22 @@
+import { Empty, Spin } from 'antd'
+
+/** Khung chờ khi tải trang (fallback của Suspense). fullScreen = chiếm cả màn hình (ngoài layout). */
+export function PageLoading({ fullScreen = false, label = 'Đang tải trang...' }) {
+  return (
+    <div className={`page-loading ${fullScreen ? 'page-loading--full' : ''}`} role="status" aria-live="polite">
+      <Spin />
+      <span>{label}</span>
+    </div>
+  )
+}
+
+/** Nội dung locale.emptyText của Table: phân biệt lỗi tải / lọc không khớp / chưa có dữ liệu. */
+export function TableEmpty({
+  error = false,
+  filtered = false,
+  emptyLabel = 'Chưa có dữ liệu',
+  filteredLabel = 'Không có bản ghi khớp bộ lọc',
+  errorLabel = 'Không tải được dữ liệu. Bấm "Tải lại" để thử lại.',
+}) {
+  return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={error ? errorLabel : filtered ? filteredLabel : emptyLabel} />
+}

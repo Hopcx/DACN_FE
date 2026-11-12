@@ -1,5 +1,7 @@
+import { Suspense } from 'react'
 import { Outlet } from 'react-router-dom'
 import { FileDoneOutlined, SafetyCertificateOutlined, BarChartOutlined, AppstoreOutlined } from '@ant-design/icons'
+import { PageLoading } from '../ui/PageState'
 import './AuthLayout.css'
 
 const FEATURES = [
@@ -27,7 +29,7 @@ export default function AuthLayout() {
           ))}
         </ul>
       </aside>
-      <main className="auth-panel"><Outlet /></main>
+      <main className="auth-panel"><Suspense fallback={<PageLoading />}><Outlet /></Suspense></main>
     </div>
   )
 }

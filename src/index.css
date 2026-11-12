@@ -115,6 +115,8 @@ a:hover {
 .page-header__title { margin: 0; font-size: 20px; font-weight: 700; color: #1b9a8e; line-height: 1.3; text-transform: uppercase; letter-spacing: .3px; }
 .page-header__desc { margin: 4px 0 0; color: #64748b; font-size: 14px; }
 .page-header__extra { display: flex; gap: 8px; flex-wrap: wrap; }
+.page-loading { min-height: 240px; display: grid; place-content: center; justify-items: center; gap: 10px; color: #64748b; }
+.page-loading--full { min-height: 100vh; }
 .page-card {
   background: #fff; border: 1px solid #e6ebf1; border-radius: 14px; padding: 20px;
   box-shadow: 0 1px 2px rgba(15, 42, 68, .04);
