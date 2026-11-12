@@ -22,7 +22,7 @@ export default function LoginPage() {
     try {
       const user = await login(emailOrPhone.trim(), password)
       navigate(String(user.levelId) === '4' ? ROUTES.myClasses
-        : String(user.levelId) === '3' ? ROUTES.teacherClasses : ROUTES.adminDashboard, { replace: true })
+        : String(user.levelId) === '3' ? ROUTES.teacherOverview : ROUTES.adminDashboard, { replace: true })
     } catch (failure) {
       notifyApiError(failure)
     } finally {
