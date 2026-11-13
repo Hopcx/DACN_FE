@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Alert, Button, Checkbox, Form, Input, InputNumber, Modal, Select, Space, Table, Typography } from 'antd'
 import PageHeader from '../../components/ui/PageHeader'
+import { TableEmpty } from '../../components/ui/PageState'
 import { getApiError } from '../../api/response'
+import { visibleExams } from '../../services/examList'
 import { createExam, createVariant, getExams, getExamSubjects, getQuestionOptions, getVariants, updateExam, updateVariant } from '../../services/examService'
 
 const stateOptions = [{ value: 2, label: 'Nháp' }, { value: 1, label: 'Công khai' }]
@@ -26,14 +28,17 @@ export default function ExamManagementPage() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [keyword, setKeyword] = useState('')
+  const [examPage, setExamPage] = useState(1)
+  const [loadFailed, setLoadFailed] = useState(false)
 
   const load = useCallback(async () => {
     if (!allowed) return
-    setLoading(true); setError('')
+    setLoading(true); setError(''); setLoadFailed(false)
     try {
       const [items, subjectItems] = await Promise.all([getExams(), getExamSubjects()])
       setExams(items); setSubjects(subjectItems)
-    } catch (failure) { setError(getApiError(failure)) }
+    } catch (failure) { setError(getApiError(failure)); setLoadFailed(true) }
     finally { setLoading(false) }
   }, [allowed])
   useEffect(() => { load() }, [load])
@@ -59,7 +64,7 @@ export default function ExamManagementPage() {
       const body = { ...values, name: values.name.trim(), scoreMethodId: editingExam?.scoreMethodId ?? null }
       if (editingExam) await updateExam(editingExam.id, body)
       else await createExam(body)
-      setExamOpen(false); await load()
+      setExamOpen(false); if (!editingExam) setExamPage(1); await load()
       if (selectedExam && editingExam?.id === selectedExam.id) setSelectedExam({ ...selectedExam, ...body })
     } catch (failure) { setError(getApiError(failure)) }
     finally { setSaving(false) }
@@ -88,14 +93,20 @@ export default function ExamManagementPage() {
   }
 
   if (!allowed) return <Alert type="error" message="Bạn không có quyền quản lý bài thi." />
+  const shownExams = visibleExams(exams, keyword)
   const subjectName = (id) => subjects.find((x) => x.id === id)?.name || id
   const questionLabel = (id) => questions.find((x) => x.id === id)?.content || `#${id}`
   return <section className="page-body">
     <PageHeader title="Bài thi và mã đề" />
     {error && <Alert type="error" showIcon message={error} className="mb-4" />}
-    <Space className="mb-4"><Button type="primary" onClick={() => openExam(null)}>Tạo bài thi</Button><Button onClick={load}>Tải lại</Button></Space>
-    <Table rowKey="id" loading={loading} dataSource={exams.filter((x) => x.status !== 255)} pagination={{ pageSize: 10 }}
-      locale={{ emptyText: 'Chưa có bài thi' }} columns={[
+    <Space wrap className="mb-4">
+      <Input.Search placeholder="Tìm theo tên bài thi" aria-label="Tìm bài thi" allowClear maxLength={100} style={{ width: 260 }}
+        onSearch={(value) => { setKeyword(value.trim()); setExamPage(1) }}
+        onChange={(event) => { if (!event.target.value) { setKeyword(''); setExamPage(1) } }} />
+      <Button type="primary" onClick={() => openExam(null)}>Tạo bài thi</Button><Button onClick={load}>Tải lại</Button></Space>
+    <Table rowKey="id" loading={loading} dataSource={shownExams}
+      pagination={{ current: examPage, pageSize: 10, showSizeChanger: false, onChange: setExamPage }}
+      locale={{ emptyText: <TableEmpty error={loadFailed} filtered={Boolean(keyword)} emptyLabel="Chưa có bài thi" filteredLabel="Không có bài thi khớp từ khóa" /> }} columns={[
         { title: 'Bài thi', dataIndex: 'name' },
         { title: 'Môn', dataIndex: 'subjectId', render: subjectName },
         { title: 'Số câu', dataIndex: 'numberOfQuestions' },
@@ -118,7 +129,7 @@ export default function ExamManagementPage() {
     <Modal title={editingExam ? 'Cấu hình bài thi' : 'Tạo bài thi'} open={examOpen} onCancel={() => setExamOpen(false)} onOk={() => examForm.submit()} confirmLoading={saving} destroyOnHidden>
       <Form form={examForm} layout="vertical" onFinish={saveExam}>
         <Form.Item name="name" label="Tên bài thi" rules={[{ required: true, whitespace: true }]}><Input /></Form.Item>
-        <Form.Item name="subjectId" label="Môn học" rules={[{ required: true }]}><Select options={subjects.filter((x) => x.status === 1).map((x) => ({ value: x.id, label: x.name }))} /></Form.Item>
+        <Form.Item name="subjectId" label="Môn học" rules={[{ required: true }]}><Select showSearch={{ optionFilterProp: 'label' }} virtual={false} options={subjects.filter((x) => x.status === 1).map((x) => ({ value: x.id, label: x.name }))} /></Form.Item>
         <Form.Item name="description" label="Mô tả"><Input.TextArea /></Form.Item>
         <Space wrap>
           <Form.Item name="numberOfQuestions" label="Số câu" rules={[{ required: true }]}><InputNumber min={1} precision={0} /></Form.Item>

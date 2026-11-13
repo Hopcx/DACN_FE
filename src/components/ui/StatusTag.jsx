@@ -1,6 +1,6 @@
 import { Tag } from 'antd'
 
-const COLORS = { success: 'green', warning: 'orange', info: 'blue', danger: 'red' }
+const COLORS = { success: 'green', warning: 'orange', info: 'blue', danger: 'red', purple: 'purple', cyan: 'cyan' }
 
 export default function StatusTag({ tone = 'default', children }) {
   return <Tag color={COLORS[tone] || 'default'} variant="filled">{children}</Tag>

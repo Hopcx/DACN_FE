@@ -1,22 +1,24 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Avatar, Dropdown } from 'antd'
 import {
-  AppstoreOutlined, BankOutlined, BarChartOutlined, BookOutlined, CalendarOutlined, FileTextOutlined,
+  ApartmentOutlined, AppstoreOutlined, BankOutlined, BarChartOutlined, BookOutlined, CalendarOutlined, DashboardOutlined, FileTextOutlined,
   FileSearchOutlined, HistoryOutlined, HomeOutlined, KeyOutlined, LogoutOutlined, MenuOutlined, QuestionCircleOutlined,
-  SafetyOutlined, SolutionOutlined, TeamOutlined, UserOutlined,
+  ReadOutlined, SafetyOutlined, ScheduleOutlined, SolutionOutlined, TeamOutlined, UserOutlined,
 } from '@ant-design/icons'
 import { logout } from '../../services/authService'
 import { getApiError } from '../../api/response'
 import { ROUTES } from '../../data/constants'
+import { PageLoading } from '../ui/PageState'
+import PageErrorBoundary from '../ui/PageErrorBoundary'
 import './DashboardLayout.css'
 
 const ROLE_LABELS = { 1: 'Quản trị viên', 2: 'Người ra đề', 3: 'Giảng viên', 4: 'Học viên' }
 
 const STUDENT_NAV = [
-  { to: ROUTES.myClasses, label: 'Lớp', icon: <TeamOutlined /> },
-  { to: ROUTES.mySchedules, label: 'Lịch thi', icon: <CalendarOutlined /> },
+  { to: ROUTES.myClasses, label: 'Lớp', icon: <ReadOutlined /> },
+  { to: ROUTES.mySchedules, label: 'Lịch thi', icon: <ScheduleOutlined /> },
   { to: '/student/attempts', label: 'Bài đã làm', icon: <HistoryOutlined /> },
 ]
 
@@ -35,14 +37,14 @@ export default function DashboardLayout() {
   const topNav = level === '4'
 
   const sections = level === '3' ? [{ items: [
-      { to: ROUTES.teacherOverview, label: 'Tổng quan', icon: <HomeOutlined /> },
+      { to: ROUTES.teacherOverview, label: 'Tổng quan', icon: <DashboardOutlined /> },
       { to: ROUTES.teacherClasses, label: 'Lớp của tôi', icon: <TeamOutlined /> },
     ] }]
     : topNav ? [] : [
       { items: [{ to: '/admin/dashboard', label: 'Trang chủ', icon: <HomeOutlined /> }] },
       { title: 'Quản lý', items: [
         ...(can(4) ? [{ to: ROUTES.schedules, label: 'Quản lý lịch thi', icon: <CalendarOutlined /> }] : []),
-        ...(isAdmin ? [{ to: ROUTES.classes, label: 'Quản lý lớp học', icon: <TeamOutlined /> }] : []),
+        ...(isAdmin ? [{ to: ROUTES.classes, label: 'Quản lý lớp học', icon: <ApartmentOutlined /> }] : []),
         ...(isAdmin ? [{ to: ROUTES.users, label: 'Quản lý tài khoản', icon: <UserOutlined /> }] : []),
         ...(can(1) ? [{ to: ROUTES.exams, label: 'Quản lý bài thi', icon: <FileTextOutlined /> }] : []),
         ...(can(3) ? [{ to: ROUTES.subjects, label: 'Quản lý môn học', icon: <BookOutlined /> }] : []),
@@ -60,7 +62,7 @@ export default function DashboardLayout() {
           { to: ROUTES.userPermissions, label: 'Phân quyền người dùng', icon: <KeyOutlined /> },
         ] },
         { title: 'Khu vực giảng viên', items: [
-          { to: ROUTES.teacherOverview, label: 'Tổng quan giảng viên', icon: <HomeOutlined /> },
+          { to: ROUTES.teacherOverview, label: 'Tổng quan giảng viên', icon: <DashboardOutlined /> },
           { to: ROUTES.teacherClasses, label: 'Lớp và kết quả', icon: <TeamOutlined /> },
         ] },
         { title: 'Khu vực học viên', items: STUDENT_NAV.map((item) => ({ ...item, label: item.label === 'Lớp' ? 'Lớp học' : item.label })) },
@@ -110,7 +112,7 @@ export default function DashboardLayout() {
           {userMenu}
         </header>
         {logoutError && <p role="alert" className="account-error dashboard-alert">{logoutError}</p>}
-        <main className="dashboard-main"><Outlet /></main>
+        <main className="dashboard-main"><PageErrorBoundary key={location.pathname}><Suspense fallback={<PageLoading />}><Outlet /></Suspense></PageErrorBoundary></main>
       </div>
     )
   }
@@ -149,7 +151,7 @@ export default function DashboardLayout() {
           {userMenu}
         </header>
         {logoutError && <p role="alert" className="account-error dashboard-alert">{logoutError}</p>}
-        <main className="dashboard-main"><Outlet /></main>
+        <main className="dashboard-main"><PageErrorBoundary key={location.pathname}><Suspense fallback={<PageLoading />}><Outlet /></Suspense></PageErrorBoundary></main>
       </div>
     </div>
   )

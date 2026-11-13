@@ -68,5 +68,8 @@
   .dashboard-sidebar__brand-text, .dashboard-nav__label, .dashboard-nav__title, .dashboard-user__info { display: none; }
   .dashboard-nav__item { justify-content: center; padding-inline: 0; }
   .dashboard-main { padding: 16px; }
-  .student-topbar__link span { display: none; }
+  .student-topbar { height: auto; flex-wrap: wrap; gap: 6px 12px; padding-block: 8px; }
+  .student-topbar__brand { flex: 1; }
+  .student-topbar__nav { order: 3; flex: 1 0 100%; justify-content: flex-start; overflow-x: auto; }
+  .student-topbar__link { flex-shrink: 0; padding: 8px 12px; }
 }
