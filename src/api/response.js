@@ -49,3 +49,8 @@ export function getApiErrorDetails(error) {
   const data = error?.response?.data?.data
   return Array.isArray(data) ? data.filter((item) => typeof item === 'string') : []
 }
+
+/** Lỗi tải dữ liệu để hiển thị bằng <LoadError>: forbidden = 403 (ẩn nút "Thử lại" vì thử lại vô ích). */
+export function toLoadError(error) {
+  return { message: getApiError(error), forbidden: error?.response?.status === 403 }
+}

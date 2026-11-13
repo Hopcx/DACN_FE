@@ -4,6 +4,7 @@ import AuthLayout from './components/layout/AuthLayout'
 import RequireLevel from './components/auth/RequireLevel'
 import RequireAuth from './components/auth/RequireAuth'
 import { PageLoading } from './components/ui/PageState'
+import PageErrorBoundary from './components/ui/PageErrorBoundary'
 const HomePage = lazy(() => import('./pages/HomePage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'))
@@ -30,6 +31,7 @@ const StudentAttemptHistoryPage = lazy(() => import('./pages/attempts/StudentAtt
 
 export default function App() {
   return (
+    <PageErrorBoundary fullScreen>
     <Suspense fallback={<PageLoading fullScreen />}>
     <Routes>
       <Route path="/" element={<HomePage />} />
@@ -48,11 +50,11 @@ export default function App() {
           <Route path="audit" element={<AdminAuditPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="users" element={<AdminUsersPage />} />
-          <Route path="levels" element={<CatalogPage kind="levels" />} />
-          <Route path="permissions" element={<CatalogPage kind="permissions" />} />
+          <Route path="levels" element={<CatalogPage key="levels" kind="levels" />} />
+          <Route path="permissions" element={<CatalogPage key="permissions" kind="permissions" />} />
           <Route path="user-permissions" element={<UserPermissionsPage />} />
-          <Route path="subjects" element={<CatalogPage kind="subjects" />} />
-          <Route path="rooms" element={<CatalogPage kind="rooms" />} />
+          <Route path="subjects" element={<CatalogPage key="subjects" kind="subjects" />} />
+          <Route path="rooms" element={<CatalogPage key="rooms" kind="rooms" />} />
           <Route path="classes" element={<AdminClassesPage />} />
           <Route path="questions" element={<QuestionBankPage />} />
           <Route path="exams" element={<ExamManagementPage />} />
@@ -75,5 +77,6 @@ export default function App() {
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
     </Suspense>
+    </PageErrorBoundary>
   )
 }

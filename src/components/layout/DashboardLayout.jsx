@@ -11,6 +11,7 @@ import { logout } from '../../services/authService'
 import { getApiError } from '../../api/response'
 import { ROUTES } from '../../data/constants'
 import { PageLoading } from '../ui/PageState'
+import PageErrorBoundary from '../ui/PageErrorBoundary'
 import './DashboardLayout.css'
 
 const ROLE_LABELS = { 1: 'Quản trị viên', 2: 'Người ra đề', 3: 'Giảng viên', 4: 'Học viên' }
@@ -111,7 +112,7 @@ export default function DashboardLayout() {
           {userMenu}
         </header>
         {logoutError && <p role="alert" className="account-error dashboard-alert">{logoutError}</p>}
-        <main className="dashboard-main"><Suspense fallback={<PageLoading />}><Outlet /></Suspense></main>
+        <main className="dashboard-main"><PageErrorBoundary key={location.pathname}><Suspense fallback={<PageLoading />}><Outlet /></Suspense></PageErrorBoundary></main>
       </div>
     )
   }
@@ -150,7 +151,7 @@ export default function DashboardLayout() {
           {userMenu}
         </header>
         {logoutError && <p role="alert" className="account-error dashboard-alert">{logoutError}</p>}
-        <main className="dashboard-main"><Suspense fallback={<PageLoading />}><Outlet /></Suspense></main>
+        <main className="dashboard-main"><PageErrorBoundary key={location.pathname}><Suspense fallback={<PageLoading />}><Outlet /></Suspense></PageErrorBoundary></main>
       </div>
     </div>
   )

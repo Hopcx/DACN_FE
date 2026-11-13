@@ -1,4 +1,5 @@
-import { Empty, Spin } from 'antd'
+import { Alert, Button, Empty, Spin } from 'antd'
+import { ReloadOutlined } from '@ant-design/icons'
 
 /** Khung chờ khi tải trang (fallback của Suspense). fullScreen = chiếm cả màn hình (ngoài layout). */
 export function PageLoading({ fullScreen = false, label = 'Đang tải trang...' }) {
@@ -19,4 +20,15 @@ export function TableEmpty({
   errorLabel = 'Không tải được dữ liệu. Bấm "Tải lại" để thử lại.',
 }) {
   return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={error ? errorLabel : filtered ? filteredLabel : emptyLabel} />
+}
+
+/** Thông báo lỗi tải dữ liệu có nút "Thử lại" (ẩn khi 403 hoặc không có onRetry). error = kết quả toLoadError hoặc null. */
+export function LoadError({ error, onRetry, retrying = false }) {
+  if (!error) return null
+  return (
+    <Alert type="error" showIcon className="page-alert" title={error.message}
+      action={!error.forbidden && onRetry
+        ? <Button size="small" icon={<ReloadOutlined />} loading={retrying} onClick={onRetry}>Thử lại</Button>
+        : undefined} />
+  )
 }

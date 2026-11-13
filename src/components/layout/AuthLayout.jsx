@@ -1,7 +1,8 @@
 import { Suspense } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { FileDoneOutlined, SafetyCertificateOutlined, BarChartOutlined, AppstoreOutlined } from '@ant-design/icons'
 import { PageLoading } from '../ui/PageState'
+import PageErrorBoundary from '../ui/PageErrorBoundary'
 import './AuthLayout.css'
 
 const FEATURES = [
@@ -11,6 +12,7 @@ const FEATURES = [
 ]
 
 export default function AuthLayout() {
+  const location = useLocation()
   return (
     <div className="auth-layout">
       <aside className="auth-intro">
@@ -29,7 +31,7 @@ export default function AuthLayout() {
           ))}
         </ul>
       </aside>
-      <main className="auth-panel"><Suspense fallback={<PageLoading />}><Outlet /></Suspense></main>
+      <main className="auth-panel"><PageErrorBoundary key={location.pathname}><Suspense fallback={<PageLoading />}><Outlet /></Suspense></PageErrorBoundary></main>
     </div>
   )
 }
