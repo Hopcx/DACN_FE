@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Alert, Button, Checkbox, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography } from 'antd'
 import PageHeader from '../../components/ui/PageHeader'
+import { TableEmpty } from '../../components/ui/PageState'
 import { getApiError } from '../../api/response'
 import { createQuestion, deleteQuestion, downloadQuestionTemplate, getQuestionLevels, getQuestions, getQuestionSubjects,
   getQuestionTypes, importQuestions, updateQuestion, exportQuestions } from '../../services/questionService'
@@ -23,6 +24,7 @@ export default function QuestionBankPage() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [loadFailed, setLoadFailed] = useState(false)
   const [importFile, setImportFile] = useState(null)
   const [importErrors, setImportErrors] = useState([])
   const [importNotice, setImportNotice] = useState('')
@@ -31,9 +33,9 @@ export default function QuestionBankPage() {
 
   const load = useCallback(async () => {
     if (!allowed) return
-    setLoading(true); setError('')
+    setLoading(true); setError(''); setLoadFailed(false)
     try { setQuestions(await getQuestions(filters)) }
-    catch (failure) { setError(getApiError(failure)) }
+    catch (failure) { setError(getApiError(failure)); setLoadFailed(true) }
     finally { setLoading(false) }
   }, [allowed, filters])
 
@@ -121,7 +123,8 @@ export default function QuestionBankPage() {
     {importNotice && <Alert type="success" showIcon message={importNotice} className="mb-4" />}
     <Space wrap className="mb-4">
       <Input.Search placeholder="Tìm nội dung" allowClear onSearch={(textSearch) => setFilters((old) => ({ ...old, textSearch: textSearch.trim() || undefined }))} />
-      <Select allowClear placeholder="Môn học" style={{ minWidth: 160 }} options={choices(subjects)}
+      <Select allowClear placeholder="Môn học" aria-label="Lọc theo môn học" style={{ minWidth: 200 }} popupMatchSelectWidth={false}
+        showSearch={{ optionFilterProp: 'label' }} virtual={false} options={choices(subjects)}
         onChange={(subjectId) => changeExportFilter({ subjectId })} />
       <Select allowClear placeholder="Loại" style={{ minWidth: 170 }} options={choices(types).filter((x) => x.value <= 3)}
         onChange={(questionTypeId) => changeExportFilter({ questionTypeId })} />
@@ -162,7 +165,8 @@ export default function QuestionBankPage() {
       <Button className="mb-4" onClick={() => setExportErrors([])}>Đóng danh sách lỗi</Button>
     </>}
     <Table rowKey="id" loading={loading} dataSource={questions} pagination={{ pageSize: 10 }}
-      locale={{ emptyText: 'Chưa có câu hỏi' }} columns={[
+      locale={{ emptyText: <TableEmpty error={loadFailed} filtered={Boolean(filters.textSearch || filters.subjectId || filters.questionTypeId || filters.questionLevelId)}
+        emptyLabel="Chưa có câu hỏi" filteredLabel="Không có câu hỏi khớp bộ lọc" /> }} columns={[
         { title: 'Nội dung', dataIndex: 'content' },
         { title: 'Môn', dataIndex: 'subjectId', render: (id) => label(subjects, id) },
         { title: 'Loại', dataIndex: 'questionTypeId', render: (id) => label(types, id) },
@@ -185,7 +189,7 @@ export default function QuestionBankPage() {
           { content: 'Đúng', isCorrect: true }, { content: 'Sai', isCorrect: false },
         ])
       }}>
-        <Form.Item name="subjectId" label="Môn học" rules={[{ required: true }]}><Select options={choices(subjects)} /></Form.Item>
+        <Form.Item name="subjectId" label="Môn học" rules={[{ required: true }]}><Select showSearch={{ optionFilterProp: 'label' }} virtual={false} options={choices(subjects)} /></Form.Item>
         <Form.Item name="questionTypeId" label="Loại câu hỏi" rules={[{ required: true }]}><Select options={choices(types).filter((x) => x.value <= 3)} /></Form.Item>
         <Form.Item name="questionLevelId" label="Mức độ"><Select allowClear options={choices(levels)} /></Form.Item>
         <Form.Item name="content" label="Nội dung" rules={[{ required: true, whitespace: true }]}><Input.TextArea maxLength={4000} /></Form.Item>

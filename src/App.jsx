@@ -1,33 +1,38 @@
+import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import AuthLayout from './components/layout/AuthLayout'
 import RequireLevel from './components/auth/RequireLevel'
-import HomePage from './pages/HomePage'
-import NotFoundPage from './pages/NotFoundPage'
-import LoginPage from './pages/auth/LoginPage'
-import RegisterPage from './pages/auth/RegisterPage'
-import VerifyEmailPage from './pages/auth/VerifyEmailPage'
-import SelectRolePage from './pages/auth/SelectRolePage'
-import AdminDashboardPage from './pages/dashboard/AdminDashboardPage'
-import AdminAttemptsPage from './pages/dashboard/AdminAttemptsPage'
-import TeacherOverviewPage from './pages/dashboard/TeacherOverviewPage'
-import AdminAuditPage from './pages/audit/AdminAuditPage'
 import RequireAuth from './components/auth/RequireAuth'
-import ProfilePage from './pages/account/ProfilePage'
-import AdminUsersPage from './pages/account/AdminUsersPage'
-import CatalogPage from './pages/catalog/CatalogPage'
-import UserPermissionsPage from './pages/catalog/UserPermissionsPage'
-import AdminClassesPage from './pages/classes/AdminClassesPage'
-import StudentClassesPage from './pages/classes/StudentClassesPage'
-import TeacherClassesPage from './pages/classes/TeacherClassesPage'
-import QuestionBankPage from './pages/questions/QuestionBankPage'
-import ExamManagementPage from './pages/exams/ExamManagementPage'
-import AdminSchedulesPage from './pages/schedules/AdminSchedulesPage'
-import StudentSchedulesPage from './pages/schedules/StudentSchedulesPage'
-import StudentAttemptPage from './pages/attempts/StudentAttemptPage'
-import StudentAttemptHistoryPage from './pages/attempts/StudentAttemptHistoryPage'
+import { PageLoading } from './components/ui/PageState'
+import PageErrorBoundary from './components/ui/PageErrorBoundary'
+const HomePage = lazy(() => import('./pages/HomePage'))
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
+const LoginPage = lazy(() => import('./pages/auth/LoginPage'))
+const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'))
+const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'))
+const SelectRolePage = lazy(() => import('./pages/auth/SelectRolePage'))
+const AdminDashboardPage = lazy(() => import('./pages/dashboard/AdminDashboardPage'))
+const AdminAttemptsPage = lazy(() => import('./pages/dashboard/AdminAttemptsPage'))
+const TeacherOverviewPage = lazy(() => import('./pages/dashboard/TeacherOverviewPage'))
+const AdminAuditPage = lazy(() => import('./pages/audit/AdminAuditPage'))
+const ProfilePage = lazy(() => import('./pages/account/ProfilePage'))
+const AdminUsersPage = lazy(() => import('./pages/account/AdminUsersPage'))
+const CatalogPage = lazy(() => import('./pages/catalog/CatalogPage'))
+const UserPermissionsPage = lazy(() => import('./pages/catalog/UserPermissionsPage'))
+const AdminClassesPage = lazy(() => import('./pages/classes/AdminClassesPage'))
+const StudentClassesPage = lazy(() => import('./pages/classes/StudentClassesPage'))
+const TeacherClassesPage = lazy(() => import('./pages/classes/TeacherClassesPage'))
+const QuestionBankPage = lazy(() => import('./pages/questions/QuestionBankPage'))
+const ExamManagementPage = lazy(() => import('./pages/exams/ExamManagementPage'))
+const AdminSchedulesPage = lazy(() => import('./pages/schedules/AdminSchedulesPage'))
+const StudentSchedulesPage = lazy(() => import('./pages/schedules/StudentSchedulesPage'))
+const StudentAttemptPage = lazy(() => import('./pages/attempts/StudentAttemptPage'))
+const StudentAttemptHistoryPage = lazy(() => import('./pages/attempts/StudentAttemptHistoryPage'))
 
 export default function App() {
   return (
+    <PageErrorBoundary fullScreen>
+    <Suspense fallback={<PageLoading fullScreen />}>
     <Routes>
       <Route path="/" element={<HomePage />} />
 
@@ -45,11 +50,11 @@ export default function App() {
           <Route path="audit" element={<AdminAuditPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="users" element={<AdminUsersPage />} />
-          <Route path="levels" element={<CatalogPage kind="levels" />} />
-          <Route path="permissions" element={<CatalogPage kind="permissions" />} />
+          <Route path="levels" element={<CatalogPage key="levels" kind="levels" />} />
+          <Route path="permissions" element={<CatalogPage key="permissions" kind="permissions" />} />
           <Route path="user-permissions" element={<UserPermissionsPage />} />
-          <Route path="subjects" element={<CatalogPage kind="subjects" />} />
-          <Route path="rooms" element={<CatalogPage kind="rooms" />} />
+          <Route path="subjects" element={<CatalogPage key="subjects" kind="subjects" />} />
+          <Route path="rooms" element={<CatalogPage key="rooms" kind="rooms" />} />
           <Route path="classes" element={<AdminClassesPage />} />
           <Route path="questions" element={<QuestionBankPage />} />
           <Route path="exams" element={<ExamManagementPage />} />
@@ -71,5 +76,7 @@ export default function App() {
 
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
+    </Suspense>
+    </PageErrorBoundary>
   )
 }

@@ -10,15 +10,25 @@ const CHART_COLORS = {
 // Trục số lượt chỉ hiện số nguyên.
 const countAxis = (title) => ({ title, labelFormatter: (value) => (Number.isInteger(Number(value)) ? value : '') })
 
+// Nhãn đỉnh cột: cách đỉnh 6px, không bị cắt (chừa khoảng trống 20% phía trên trục y).
+const TOP_LABEL_STYLE = { dy: -6, textBaseline: 'bottom', fontWeight: 600 }
+const headroom = (values) => {
+  const max = Math.max(0, ...values.map(Number).filter(Number.isFinite))
+  return max > 0 ? Math.ceil(max * 1.2) : 1
+}
+
 const noData = <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có dữ liệu" />
 
 /** Biểu đồ cột: [{ label, value, key }] — mỗi cột một màu theo key. */
 export function StatusColumnChart({ data, height = 260 }) {
   if (!data?.some((item) => item.value > 0)) return noData
   return <Column data={data} xField="label" yField="value" colorField="key" height={height}
-    scale={{ color: { domain: data.map((item) => item.key), range: data.map((item) => CHART_COLORS[item.key] || '#2f6fed') } }}
+    scale={{
+      color: { domain: data.map((item) => item.key), range: data.map((item) => CHART_COLORS[item.key] || '#2f6fed') },
+      y: { domainMin: 0, domainMax: headroom(data.map((item) => item.value)) },
+    }}
     legend={false} axis={{ y: countAxis(false), x: { title: false } }}
-    label={{ text: 'value', position: 'top', dy: -10, style: { fontWeight: 600 } }}
+    label={{ text: 'value', position: 'top', style: TOP_LABEL_STYLE }}
     style={{ radiusTopLeft: 6, radiusTopRight: 6, maxWidth: 56 }}
     tooltip={{ items: [{ channel: 'y', name: 'Số lượt' }] }} />
 }
@@ -41,7 +51,8 @@ export function DistributionChart({ data, height = 240, xTitle = 'Điểm' }) {
   return <Column data={data} xField="label" yField="count" height={height}
     style={{ fill: '#2f6fed', radiusTopLeft: 4, radiusTopRight: 4, maxWidth: 40 }}
     axis={{ x: { title: xTitle }, y: countAxis('Số lượt') }}
-    label={{ text: (item) => (item.count ? item.count : ''), position: 'top', dy: -10 }}
+    scale={{ y: { domainMin: 0, domainMax: headroom(data.map((item) => item.count)) } }}
+    label={{ text: (item) => (item.count ? item.count : ''), position: 'top', style: TOP_LABEL_STYLE }}
     tooltip={{ items: [{ channel: 'y', name: 'Số lượt' }] }} />
 }
 
