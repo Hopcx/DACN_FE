@@ -83,3 +83,27 @@ test('returns a new array, not the input reference', () => {
   const exams = [{ id: 1, name: 'A' }]
   assert.notEqual(visibleExams(exams), exams)
 })
+
+test('filters by subject and status (numeric strings allowed)', () => {
+  const exams = [
+    { id: 1, name: 'A', subjectId: 1, status: 1 },
+    { id: 2, name: 'B', subjectId: 2, status: 2 },
+    { id: 3, name: 'C', subjectId: 1, status: 2 },
+  ]
+  assert.deepEqual(visibleExams(exams, '', { subjectId: 1 }).map((x) => x.id), [3, 1])
+  assert.deepEqual(visibleExams(exams, '', { status: '2' }).map((x) => x.id), [3, 2])
+  assert.deepEqual(visibleExams(exams, '', { subjectId: '1', status: 2 }).map((x) => x.id), [3])
+})
+
+test('combines keyword with subject and status filters', () => {
+  const exams = [
+    { id: 1, name: 'Giữa kỳ', subjectId: 1, status: 2 },
+    { id: 2, name: 'Giữa kỳ', subjectId: 2, status: 2 },
+    { id: 3, name: 'Cuối kỳ', subjectId: 1, status: 2 },
+  ]
+  assert.deepEqual(visibleExams(exams, 'giữa', { subjectId: 1, status: 2 }).map((x) => x.id), [1])
+})
+
+test('deleted exams stay hidden even when filtering status 255', () => {
+  assert.deepEqual(visibleExams([{ id: 1, name: 'A', status: 255 }], '', { status: 255 }), [])
+})
