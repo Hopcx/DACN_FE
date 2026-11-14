@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { formatDuration, reviewErrorMessage, reviewQuestionState } from '../src/services/attemptReview.js'
+import { formatDuration, reviewErrorMessage, reviewQuestionState, voidErrorMessage } from '../src/services/attemptReview.js'
 import { getApiError } from '../src/api/response.js'
 
 const failure = (status, message) => ({ response: { status, data: { success: false, message } } })
@@ -37,4 +37,17 @@ test('reviewQuestionState reads selectedAnswerIds', () => {
   assert.equal(reviewQuestionState({ selectedAnswerIds: [] }), 'empty')
   assert.equal(reviewQuestionState({}), 'empty')
   assert.equal(reviewQuestionState(null), 'empty')
+})
+
+test('maps the four void error codes to Vietnamese messages', () => {
+  assert.equal(voidErrorMessage(failure(400, 'VOID_REASON_REQUIRED')), 'Nhập lý do hủy kết quả (tối đa 1000 ký tự).')
+  assert.equal(voidErrorMessage(failure(404, 'ATTEMPT_NOT_FOUND')), 'Không tìm thấy lượt thi.')
+  assert.equal(voidErrorMessage(failure(409, 'ATTEMPT_ALREADY_VOIDED')), 'Lượt thi này đã bị hủy trước đó.')
+  assert.equal(voidErrorMessage(failure(409, 'ATTEMPT_NOT_FINALIZED')), 'Lượt thi chưa kết thúc nên chưa thể hủy kết quả.')
+})
+
+test('void errors fall back to getApiError for other codes', () => {
+  const other = failure(500, 'SOMETHING_ELSE')
+  assert.equal(voidErrorMessage(other), getApiError(other))
+  assert.equal(voidErrorMessage(undefined), getApiError(undefined))
 })

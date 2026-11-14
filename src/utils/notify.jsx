@@ -1,7 +1,9 @@
 import { notification } from 'antd'
 import { getApiError, getApiErrorDetails, getApiErrorLevel } from '../api/response'
 
-notification.config({ placement: 'top', duration: 6, maxCount: 3 })
+// Instance lấy từ <App> của antd (NotifyBridge) để thông báo dùng đúng theme/locale; chưa gắn thì dùng hàm tĩnh
+let api = null
+export function setNotifyApi(instance) { api = instance }
 
 const TITLES = {
   warning: 'Cảnh báo',
@@ -11,7 +13,7 @@ const TITLES = {
 }
 
 function open(level, description, title) {
-  notification[level]({
+  ;(api || notification)[level]({
     title: title || TITLES[level],
     description,
     className: `notice notice--${level}`,

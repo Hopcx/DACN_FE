@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { ConfigProvider, theme } from 'antd'
+import { App as AntApp, ConfigProvider, theme } from 'antd'
 import viVN from 'antd/locale/vi_VN'
 import dayjs from 'dayjs'
 import 'dayjs/locale/vi'
@@ -13,6 +13,7 @@ import './index.css'
 import './pages/student.css'
 import './notice.css'
 import App from './App.jsx'
+import NotifyBridge from './utils/NotifyBridge'
 
 dayjs.locale('vi')
 
@@ -38,13 +39,18 @@ createRoot(document.getElementById('root')).render(
         },
       }}
     >
-      <Provider store={store}>
-        <AppProvider>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
-        </AppProvider>
-      </Provider>
+      {/* div.ant-app tự đặt cỡ chữ/font; giữ kế thừa từ :root như trước khi có App */}
+      <AntApp notification={{ placement: 'top', duration: 6, maxCount: 3 }}
+        style={{ color: 'inherit', fontSize: 'inherit', lineHeight: 'inherit', fontFamily: 'inherit' }}>
+        <NotifyBridge />
+        <Provider store={store}>
+          <AppProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </AppProvider>
+        </Provider>
+      </AntApp>
     </ConfigProvider>
   </StrictMode>,
 )

@@ -85,7 +85,8 @@ export default function QuestionBankPage() {
     setSaving(true); setFormError('')
     try {
       const body = { ...values, content: values.content.trim(), answers }
-      if (editing) await updateQuestion(editing.id, body)
+      // PUT thay toàn bộ câu hỏi (contract 01-http.md): gửi lại documentPath để không bị xóa
+      if (editing) await updateQuestion(editing.id, { ...body, documentPath: editing.documentPath ?? null })
       else await createQuestion(body)
       setOpen(false); await load()
     } catch (failure) { setFormError(getApiError(failure)) }
@@ -104,7 +105,8 @@ export default function QuestionBankPage() {
     try {
       await updateQuestion(item.id, {
         subjectId: item.subjectId, questionTypeId: item.questionTypeId, questionLevelId: item.questionLevelId,
-        content: item.content, status: 1, answers: item.answers.map(({ content, isCorrect }) => ({ content, isCorrect })),
+        content: item.content, status: 1, documentPath: item.documentPath ?? null,
+        answers: item.answers.map(({ content, isCorrect }) => ({ content, isCorrect })),
       })
       await load()
     } catch (failure) { setError(getApiError(failure)) }

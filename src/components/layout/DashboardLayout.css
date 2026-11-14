@@ -45,6 +45,7 @@
 .dashboard-user__name { font-weight: 600; font-size: 14px; color: #16263a; }
 .dashboard-user__role { font-size: 12px; color: #64748b; }
 .dashboard-alert { margin: 12px 24px 0; }
+.account-error { color: #b91c1c; }
 .dashboard-main { flex: 1; padding: 24px; max-width: 1500px; width: 100%; margin: 0 auto; }
 
 /* Giao diện học viên: thanh điều hướng ngang phía trên */

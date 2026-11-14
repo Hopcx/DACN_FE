@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Alert, Button, Descriptions, Input, Modal, Segmented, Select, Table, Typography } from 'antd'
 import { DeleteOutlined, ProfileOutlined, ReloadOutlined } from '@ant-design/icons'
 import { getApiError, toLoadError } from '../../api/response'
+import { voidErrorMessage } from '../../services/attemptReview'
 import { getAttemptReport, getAttemptReportOptions, getLegacySubmissionReport, getScoreGroups, voidAttempt } from '../../services/attemptReportService'
 import { DistributionChart, GroupedDistributionChart, PassDonutChart, StatusColumnChart } from '../../components/charts'
 import { formatScheduleTime } from '../../services/scheduleTime'
@@ -79,7 +80,7 @@ export default function AdminAttemptReport() {
       await voidAttempt(voidTarget.attemptId, voidReason.trim())
       setVoidTarget(null); setVoidReason(''); setDetail(null)
       await load()
-    } catch (failure) { setVoidError(getApiError(failure)) }
+    } catch (failure) { setVoidError(voidErrorMessage(failure)) }
     finally { setVoidBusy(false) }
   }
   const selectProps = { allowClear: true, showSearch: { optionFilterProp: 'label' }, virtual: false, popupMatchSelectWidth: false }
