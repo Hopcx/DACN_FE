@@ -118,3 +118,10 @@
   .attempt-clock__value { font-size: 26px; }
 }
 @media (max-width: 560px) { .attempt-topbar { flex-wrap: wrap; gap: 8px; } .attempt-topbar .ant-space { flex-wrap: wrap; } .attempt-actions { justify-content: center; } }
+
+/* ---- Xem lại bài (P5.5) ---- */
+.review-summary { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: flex-start; padding: 18px 22px; margin-bottom: 16px; }
+.review-summary__item { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
+.review-summary__label { color: #64748b; font-size: 13px; }
+.review-summary__score { font-size: 30px; font-weight: 700; color: #0f766e; line-height: 1.1; }
+.review-summary small { color: #64748b; }
