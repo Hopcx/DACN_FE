@@ -12,8 +12,8 @@
 .auth-intro__icon { width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; background: rgba(255, 255, 255, .12); display: flex; align-items: center; justify-content: center; color: #7fd6cf; font-size: 18px; }
 .auth-intro__list strong { display: block; color: #fff; font-weight: 600; }
 .auth-intro__list span:not(.auth-intro__icon) { display: block; font-size: 13.5px; color: #a9bdd1; }
-.auth-panel { display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+.auth-panel { min-width: 0; display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
 @media (max-width: 900px) {
-  .auth-layout { grid-template-columns: 1fr; }
+  .auth-layout { grid-template-columns: minmax(0, 1fr); }
   .auth-intro { display: none; }
 }

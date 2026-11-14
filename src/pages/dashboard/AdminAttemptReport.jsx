@@ -141,7 +141,7 @@ export default function AdminAttemptReport() {
     </div>
     {groupsError && <Alert type="error" showIcon title={groupsError} className="attempt-report__error" />}
     <GroupedDistributionChart groups={scoreGroups?.groups} />
-    <Table rowKey="id" size="small" pagination={false} dataSource={scoreGroups?.groups || []}
+    <Table rowKey="id" size="small" pagination={false} dataSource={scoreGroups?.groups || []} scroll={{ x: 640 }}
       locale={{ emptyText: 'Chưa có lượt đã chốt' }} style={{ marginTop: 12 }}
       columns={[
         { title: groupBy === 'exam' ? 'Bài thi' : groupBy === 'class' ? 'Lớp' : 'Môn học', dataIndex: 'name' },
@@ -233,7 +233,7 @@ export default function AdminAttemptReport() {
       {' '}· Chờ kiểm tra: {legacyReport.summary.pendingStatusCount}
       {' '}· Tổng điểm gốc: {legacyReport.summary.storedScoreSum}
     </Typography.Paragraph>}
-    <Table rowKey="id" dataSource={legacyReport?.items || []}
+    <Table rowKey="id" dataSource={legacyReport?.items || []} scroll={{ x: 760 }}
       pagination={{ current: legacyPage, pageSize: 10, total: legacyReport?.totalCount || 0,
         showSizeChanger: false, onChange: setLegacyPage }} columns={[
         { title: 'Nguồn', render: (_, row) => `${row.sourceSystem}/${row.sourceDatabase}` },
