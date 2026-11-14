@@ -1,17 +1,23 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Alert, Button, Input, Modal, Segmented, Select, Space, Table, Typography } from 'antd'
-import { getApiError } from '../../api/response'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Alert, Button, Descriptions, Input, Modal, Segmented, Select, Table, Typography } from 'antd'
+import { DeleteOutlined, ProfileOutlined, ReloadOutlined } from '@ant-design/icons'
+import { getApiError, toLoadError } from '../../api/response'
 import { getAttemptReport, getAttemptReportOptions, getLegacySubmissionReport, getScoreGroups, voidAttempt } from '../../services/attemptReportService'
 import { DistributionChart, GroupedDistributionChart, PassDonutChart, StatusColumnChart } from '../../components/charts'
 import { formatScheduleTime } from '../../services/scheduleTime'
-import PageHeader from '../../components/ui/PageHeader'
+import { rowNumber, showTotalLabel } from '../../services/listView'
 import PageCard from '../../components/ui/PageCard'
 import StatusTag from '../../components/ui/StatusTag'
+import { LoadError, TableEmpty } from '../../components/ui/PageState'
 
 const time = (value) => formatScheduleTime(value, 'utc')
 const optionsOf = (items) => (items || []).map(({ id, name }) => ({ value: id, label: name }))
 const stateTone = { inProgress: 'info', submitted: 'success', timedOut: 'warning', voided: 'danger' }
 const stateLabel = { inProgress: 'Đang làm', submitted: 'Đã nộp', timedOut: 'Hết giờ', voided: 'Đã hủy' }
+const stateTag = (value) => <StatusTag tone={stateTone[value]}>{stateLabel[value] || value}</StatusTag>
+const resultTag = (value) => value == null ? '—'
+  : <StatusTag tone={value ? 'success' : 'danger'}>{value ? 'Đạt' : 'Chưa đạt'}</StatusTag>
+const canVoid = (row) => row && row.state !== 'voided' && row.state !== 'inProgress'
 
 export default function AdminAttemptReport() {
   const [filters, setFilters] = useState({})
@@ -23,16 +29,27 @@ export default function AdminAttemptReport() {
   const [legacyReport, setLegacyReport] = useState(null)
   const [legacyError, setLegacyError] = useState('')
   const [error, setError] = useState('')
+  const [loadError, setLoadError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [voidTarget, setVoidTarget] = useState(null)
   const [voidReason, setVoidReason] = useState('')
   const [voidBusy, setVoidBusy] = useState(false)
+  const [voidError, setVoidError] = useState('')
+  const [detail, setDetail] = useState(null)
+  const requestRef = useRef(0)
 
+  // Bảng phân trang server: page nằm trong deps là đúng
   const load = useCallback(async () => {
-    setLoading(true)
-    try { setReport(await getAttemptReport({ ...filters, page, pageSize: 10 })); setError('') }
-    catch (failure) { setReport(null); setError(getApiError(failure)) }
-    finally { setLoading(false) }
+    const requestId = ++requestRef.current
+    setLoading(true); setLoadError(null)
+    try {
+      const data = await getAttemptReport({ ...filters, page, pageSize: 10 })
+      if (requestId === requestRef.current) setReport(data)
+    } catch (failure) {
+      if (requestId === requestRef.current) setLoadError(toLoadError(failure))
+    } finally {
+      if (requestId === requestRef.current) setLoading(false)
+    }
   }, [filters, page])
   useEffect(() => { load() }, [load])
   const loadLegacy = useCallback(async () => {
@@ -54,33 +71,37 @@ export default function AdminAttemptReport() {
   }, [])
 
   const change = (key, value) => { setPage(1); setFilters((current) => ({ ...current, [key]: value })) }
+  const openVoid = (row) => { setVoidTarget(row); setVoidReason(''); setVoidError('') }
   const confirmVoid = async () => {
     if (!voidTarget || !voidReason.trim() || voidBusy) return
-    setVoidBusy(true); setError('')
+    setVoidBusy(true); setVoidError('')
     try {
       await voidAttempt(voidTarget.attemptId, voidReason.trim())
-      setVoidTarget(null); setVoidReason('')
+      setVoidTarget(null); setVoidReason(''); setDetail(null)
       await load()
-    } catch (failure) { setError(getApiError(failure)) }
+    } catch (failure) { setVoidError(getApiError(failure)) }
     finally { setVoidBusy(false) }
   }
+  const selectProps = { allowClear: true, showSearch: { optionFilterProp: 'label' }, virtual: false, popupMatchSelectWidth: false }
   const summary = report?.summary
   return <section className="attempt-report">
-    <PageHeader title="Báo cáo lượt thi DACN" description="Chỉ tính lượt thi DACN mới. Tỷ lệ đạt và phổ điểm tính trên lượt đã chốt chưa bị hủy (gồm hết giờ và kết quả ẩn); lượt đang làm và đã hủy không vào mẫu số." />
     <PageCard>
-    <Space wrap className="attempt-report__filters">
-      <Select allowClear placeholder="Bài thi" style={{ width: 220 }} options={optionsOf(options?.exams)}
+    <div className="page-toolbar attempt-report__filters">
+      <Select {...selectProps} placeholder="Bài thi" style={{ width: 220 }} options={optionsOf(options?.exams)}
         value={filters.examId} onChange={(value) => change('examId', value)} />
-      <Select allowClear placeholder="Lớp" style={{ width: 220 }} options={optionsOf(options?.classes)}
+      <Select {...selectProps} placeholder="Lớp" style={{ width: 220 }} options={optionsOf(options?.classes)}
         value={filters.classId} onChange={(value) => change('classId', value)} />
-      <Select allowClear placeholder="Môn học" style={{ width: 220 }} options={optionsOf(options?.subjects)}
+      <Select {...selectProps} placeholder="Môn học" style={{ width: 220 }} options={optionsOf(options?.subjects)}
         value={filters.subjectId} onChange={(value) => change('subjectId', value)} />
       <Select allowClear placeholder="Trạng thái" style={{ width: 180 }}
         options={Object.entries(stateLabel).map(([value, label]) => ({ value, label }))}
         value={filters.state} onChange={(value) => change('state', value)} />
-      <Button onClick={load} loading={loading}>Tải lại</Button>
-    </Space>
+      <div className="page-toolbar__end">
+        <Button icon={<ReloadOutlined />} onClick={load} loading={loading}>Tải lại</Button>
+      </div>
+    </div>
     </PageCard>
+    <LoadError error={loadError} onRetry={load} retrying={loading} />
     {error && <Alert type="error" showIcon title={error} className="attempt-report__error" />}
     {summary && <div className="admin-stats-grid">
       {[
@@ -136,29 +157,67 @@ export default function AdminAttemptReport() {
     </PageCard>
     <PageCard>
     <h2 className="page-section-title">Danh sách lượt thi</h2>
-    <Table rowKey="attemptId" loading={loading} dataSource={report?.items || []}
+    <Table rowKey="attemptId" size="middle" loading={loading} dataSource={report?.items || []} scroll={{ x: 1100 }}
       pagination={{ current: page, pageSize: 10, total: report?.totalCount || 0,
-        showSizeChanger: false, onChange: setPage }}
+        showSizeChanger: false, onChange: setPage, showTotal: showTotalLabel('lượt thi') }}
+      locale={{ emptyText: <TableEmpty error={Boolean(loadError)} errorLabel="Không tải được dữ liệu."
+        filtered={Boolean(filters.examId || filters.classId || filters.subjectId || filters.state)}
+        emptyLabel="Chưa có lượt thi" filteredLabel="Không có lượt thi khớp bộ lọc" /> }}
       columns={[
-        { title: 'Học viên', dataIndex: 'userName' },
-        { title: 'Bài thi', dataIndex: 'examName' },
-        { title: 'Lịch', dataIndex: 'scheduleTitle' },
-        { title: 'Bắt đầu', dataIndex: 'startedAt', render: time },
-        { title: 'Nộp', dataIndex: 'submittedAt', render: time },
-        { title: 'Trạng thái', dataIndex: 'state', render: (value) => <StatusTag tone={stateTone[value]}>{stateLabel[value] || value}</StatusTag> },
-        { title: 'Điểm gốc', dataIndex: 'totalMark', render: (value) => value ?? '—' },
-        { title: 'Kết quả', dataIndex: 'isPassed', render: (value) => value == null ? '—' : value ? 'Đạt' : 'Chưa đạt' },
-        { title: 'Hủy', render: (_, row) => row.state === 'voided'
-          ? <span title={row.voidReason}>{row.voidReason || 'Đã hủy'}</span>
-          : row.state === 'inProgress' ? '—' : <Button danger size="small" onClick={() => { setVoidTarget(row); setVoidReason('') }}>Hủy kết quả</Button> },
+        { title: 'STT', key: 'stt', width: 64, align: 'center', render: (_, __, index) => rowNumber(page, 10, index) },
+        { title: 'Học viên', dataIndex: 'userName', render: (value) => <strong>{value}</strong> },
+        { title: 'Bài thi', dataIndex: 'examName', render: (value, row) => <span className="cell-stack">
+          {value}<small>{row.scheduleTitle}</small></span> },
+        { title: 'Bắt đầu', dataIndex: 'startedAt', width: 150, render: time },
+        { title: 'Nộp', dataIndex: 'submittedAt', width: 150, render: time },
+        { title: 'Trạng thái', dataIndex: 'state', width: 110, render: stateTag },
+        { title: 'Điểm gốc', dataIndex: 'totalMark', width: 100, align: 'right', render: (value) => value ?? '—' },
+        { title: 'Kết quả', dataIndex: 'isPassed', width: 100, render: resultTag },
+        // Smoke P1 bấm nút đầu tiên của dòng: "Hủy kết quả" phải đứng trước "Chi tiết"
+        { title: 'Thao tác', key: 'actions', width: 230, render: (_, row) => <div className="page-actions">
+          {row.state === 'voided'
+            ? <span className="cell-stack"><StatusTag tone="danger">Đã hủy</StatusTag><small title={row.voidReason}>{row.voidReason}</small></span>
+            : canVoid(row) && <Button danger size="small" icon={<DeleteOutlined />} onClick={() => openVoid(row)}>Hủy kết quả</Button>}
+          <Button size="small" icon={<ProfileOutlined />} onClick={() => setDetail(row)}>Chi tiết</Button>
+        </div> },
       ]} />
     </PageCard>
-    <Modal title="Hủy kết quả lượt thi" open={Boolean(voidTarget)} okText="Xác nhận hủy"
+    <Modal title="Chi tiết lượt thi" open={Boolean(detail)} width={640} destroyOnHidden onCancel={() => setDetail(null)}
+      footer={<>
+        {canVoid(detail) && <Button danger icon={<DeleteOutlined />} onClick={() => openVoid(detail)}>Hủy kết quả</Button>}
+        <Button onClick={() => setDetail(null)}>Đóng</Button>
+      </>}>
+      {detail && <Descriptions column={1} size="small" bordered items={[
+        { key: 'user', label: 'Học viên', children: detail.userName },
+        { key: 'exam', label: 'Bài thi', children: detail.examName },
+        { key: 'schedule', label: 'Lịch thi', children: detail.scheduleTitle || '—' },
+        { key: 'start', label: 'Bắt đầu', children: time(detail.startedAt) },
+        { key: 'submit', label: 'Nộp bài', children: time(detail.submittedAt) },
+        { key: 'state', label: 'Trạng thái', children: stateTag(detail.state) },
+        { key: 'mark', label: 'Điểm gốc', children: detail.totalMark ?? '—' },
+        { key: 'result', label: 'Kết quả', children: resultTag(detail.isPassed) },
+        ...(detail.state === 'voided' ? [
+          { key: 'voidedAt', label: 'Thời điểm hủy', children: time(detail.voidedAt) },
+          { key: 'reason', label: 'Lý do hủy', children: detail.voidReason || '—' },
+        ] : []),
+      ]} />}
+    </Modal>
+    <Modal title={<span><DeleteOutlined className="text-red-600" /> Xác nhận hủy kết quả</span>} open={Boolean(voidTarget)}
+      okText="Xác nhận hủy" cancelText="Hủy" destroyOnHidden
       okButtonProps={{ danger: true, disabled: !voidReason.trim(), loading: voidBusy }}
-      onOk={confirmVoid} onCancel={() => { if (!voidBusy) { setVoidTarget(null); setVoidReason('') } }}>
-      <Typography.Paragraph>Lượt đã hủy vẫn giữ điểm và bản chấm gốc để audit. Thao tác này không hoàn lượt thi.</Typography.Paragraph>
-      <Input.TextArea value={voidReason} onChange={(event) => setVoidReason(event.target.value)}
-        maxLength={1000} showCount rows={3} placeholder="Lý do hủy (bắt buộc)" />
+      onOk={confirmVoid} onCancel={() => { if (!voidBusy) { setVoidTarget(null); setVoidReason(''); setVoidError('') } }}>
+      <Typography.Paragraph>
+        Lượt thi sẽ được đánh dấu “Đã hủy” và không còn tính vào tỷ lệ đạt, phổ điểm. Điểm và bản chấm gốc vẫn được giữ để đối soát. Thao tác này không hoàn lượt thi.
+      </Typography.Paragraph>
+      {voidTarget && <div className="detail-meta">
+        <span>Học viên: <strong>{voidTarget.userName}</strong></span>
+        <span>Bài thi: {voidTarget.examName}</span>
+        <span>Điểm gốc: {voidTarget.totalMark ?? '—'}</span>
+      </div>}
+      {voidError && <Alert type="error" showIcon title={voidError} className="page-alert" />}
+      <label htmlFor="void-reason" className="block mb-1">Lý do hủy kết quả <span className="text-red-600">*</span></label>
+      <Input.TextArea id="void-reason" value={voidReason} onChange={(event) => setVoidReason(event.target.value)}
+        maxLength={1000} showCount rows={3} placeholder="Nhập lý do hủy kết quả..." />
     </Modal>
     <PageCard>
     <h2 className="page-section-title">Bài nộp từ nguồn lịch sử</h2>

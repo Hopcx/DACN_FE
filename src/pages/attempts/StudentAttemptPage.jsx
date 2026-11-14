@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Alert, Button, Card, Checkbox, Modal, Radio, Space, Tag, Typography } from 'antd'
 import {
-  ArrowLeftOutlined, CheckCircleFilled, ClockCircleOutlined, FlagFilled, FlagOutlined, InfoCircleOutlined,
-  LeftOutlined, ReloadOutlined, RightOutlined, SaveOutlined, SendOutlined,
+  ArrowLeftOutlined, CheckCircleFilled, ClockCircleOutlined, EyeOutlined, FlagFilled, FlagOutlined, InfoCircleOutlined,
+  LeftOutlined, LockOutlined, ReloadOutlined, RightOutlined, SaveOutlined, SendOutlined,
 } from '@ant-design/icons'
 import { getApiError } from '../../api/response'
+import StatusTag from '../../components/ui/StatusTag'
+import { formatDuration, reviewErrorMessage, reviewQuestionState } from '../../services/attemptReview'
 import { getAttempt, getAttemptReview, getVisibilityCount, recordVisibilityHidden,
   saveAttempt, submitAttempt } from '../../services/attemptService'
 import { getMySchedules } from '../../services/scheduleService'
@@ -40,6 +42,7 @@ export default function StudentAttemptPage() {
   const [attempt, setAttempt] = useState(null)
   const [schedule, setSchedule] = useState(null)
   const [review, setReview] = useState(null)
+  const [reviewIndex, setReviewIndex] = useState(0)
   const [choices, setChoices] = useState({})
   const [dirty, setDirty] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -150,8 +153,8 @@ export default function StudentAttemptPage() {
   const loadReview = async () => {
     if (!attempt?.result || busy) return
     setBusy(true); setError('')
-    try { setReview(await getAttemptReview(id)) }
-    catch (failure) { setReview(null); setError(getApiError(failure)) }
+    try { setReview(await getAttemptReview(id)); setReviewIndex(0) }
+    catch (failure) { setReview(null); setError(reviewErrorMessage(failure)) }
     finally { setBusy(false) }
   }
 
@@ -160,10 +163,14 @@ export default function StudentAttemptPage() {
   useEffect(() => {
     if (!wantsReview || autoReviewed.current || !attempt?.result) return
     autoReviewed.current = true
-    getAttemptReview(id).then(setReview).catch((failure) => setError(getApiError(failure)))
+    getAttemptReview(id).then((data) => { setReview(data); setReviewIndex(0) })
+      .catch((failure) => setError(reviewErrorMessage(failure)))
   }, [wantsReview, attempt?.result, id])
 
   const questions = attempt?.questions || []
+  const reviewQuestions = review?.questions || []
+  const reviewCurrent = Math.min(reviewIndex, Math.max(0, reviewQuestions.length - 1))
+  const reviewQuestion = reviewQuestions[reviewCurrent]
   const question = questions[Math.min(current, Math.max(0, questions.length - 1))]
   const answeredCount = questions.filter((q) => (choices[q.id] || []).length > 0).length
   const locked = busy || remaining === 0
@@ -260,23 +267,73 @@ export default function StudentAttemptPage() {
           <p>Sau khi nộp, bạn không thể sửa bài làm.</p>
         </Modal>
       </> : <>
-        <Alert type={attempt.state === 'voided' ? 'warning' : 'info'} showIcon title={finishedTitle[attempt.state] || 'Đã nộp bài'}
-          description={attempt.state === 'voided' ? 'Kết quả của lượt thi này đã bị hủy.'
-            : attempt.result ? `Điểm: ${attempt.result.totalMark} · ${attempt.result.isPassed ? 'Đạt' : 'Chưa đạt'}${attempt.result.timeTakenSeconds == null ? '' : ` · Thời lượng: ${attempt.result.timeTakenSeconds} giây`}`
-              : 'Kết quả chưa được phép xem.'} />
-        {attempt.result && <div className="my-4"><Button onClick={loadReview} loading={busy}>Xem lại bài</Button>
+        {attempt.state === 'voided'
+          ? <Alert type="warning" showIcon title={finishedTitle.voided} description="Kết quả của lượt thi này đã bị hủy." className="page-alert" />
+          // Smoke P1 chờ đúng chữ "Kết quả chưa được phép xem." và tên trạng thái kết thúc
+          : !attempt.result && <Alert type="info" showIcon icon={<LockOutlined />} title={finishedTitle[attempt.state] || 'Đã nộp bài'} className="page-alert"
+            description="Kết quả chưa được phép xem. Bạn sẽ xem được điểm và đáp án khi giảng viên cho phép xem kết quả." />}
+        {attempt.result && <div className="page-card review-summary">
+          <div className="review-summary__item">
+            {/* Smoke P1 chờ chữ "Điểm:" sau khi nộp bài */}
+            <span className="review-summary__label">Điểm:</span>
+            <strong className="review-summary__score">{attempt.result.totalMark}</strong>
+          </div>
+          <div className="review-summary__item">
+            <span className="review-summary__label">Kết quả</span>
+            <span><StatusTag tone={attempt.result.isPassed ? 'success' : 'danger'}>{attempt.result.isPassed ? 'Đạt' : 'Chưa đạt'}</StatusTag></span>
+          </div>
+          <div className="review-summary__item">
+            <span className="review-summary__label">Thời gian làm bài</span>
+            <strong>{formatDuration(attempt.result.timeTakenSeconds)}</strong>
+            <small>Nộp lúc: {formatVnMoment(attempt.result.submittedAt)}</small>
+          </div>
+          <div className="review-summary__item">
+            <span className="review-summary__label">{finishedTitle[attempt.state] || 'Đã nộp bài'}</span>
+            {review?.reviewedFrom === 'attemptSnapshot' && <>
+              <span><StatusTag tone="info">Bài làm là ảnh chụp</StatusTag></span>
+              <small>Câu hỏi và đáp án hiển thị theo đúng lúc bạn làm bài.</small>
+            </>}
+          </div>
+        </div>}
+        {attempt.result && !review && <div className="my-4"><Button icon={<EyeOutlined />} onClick={loadReview} loading={busy}>Xem lại bài</Button>
           <Typography.Text className="ml-2">Đáp án chỉ được mở sau khi lịch thi kết thúc.</Typography.Text></div>}
-        {review?.questions?.map((item, index) => <Card key={item.id} title={`Câu ${index + 1}`} className="mb-4 review-question">
-          <Typography.Paragraph>{item.content}</Typography.Paragraph>
-          {item.options.map((option, i) => {
-            const picked = item.selectedAnswerIds.includes(option.id)
-            return <div key={option.id} className={`review-option ${option.isCorrect ? 'is-correct' : ''} ${picked && !option.isCorrect ? 'is-wrong' : ''}`}>
-              {picked ? '☑' : '□'} {LETTERS[i] || i + 1}. {option.content}
-              {option.isCorrect && <Tag color="green" className="ml-2">Đáp án đúng</Tag>}
-              {picked && !option.isCorrect && <Tag color="red" className="ml-2">Bạn đã chọn</Tag>}
+        {reviewQuestion && <div className="attempt-layout">
+          <aside className="attempt-palette page-card">
+            <h3 className="attempt-palette__title">Danh sách câu hỏi <small>({reviewQuestions.length} câu)</small></h3>
+            <div className="attempt-palette__legend">
+              <span><i className="dot dot--answered" />Đã trả lời</span>
+              <span><i className="dot" />Chưa trả lời</span>
+              <span><i className="dot dot--current" />Đang xem</span>
             </div>
-          })}
-        </Card>)}
+            <div className="attempt-palette__grid">{reviewQuestions.map((item, index) => {
+              const answered = reviewQuestionState(item) === 'answered'
+              const classes = ['palette-item', answered && 'is-answered', index === reviewCurrent && 'is-current']
+              return <button type="button" key={item.id} className={classes.filter(Boolean).join(' ')}
+                aria-label={`Câu ${index + 1}${answered ? ', đã trả lời' : ''}`} onClick={() => setReviewIndex(index)}>{index + 1}</button>
+            })}</div>
+          </aside>
+          <Card className="attempt-question review-question"
+            title={<span>Câu <strong className="attempt-question__no">{reviewCurrent + 1}/{reviewQuestions.length}</strong></span>}>
+            <Typography.Paragraph className="attempt-question__content">{reviewQuestion.content}</Typography.Paragraph>
+            {reviewQuestion.options.map((option, i) => {
+              const picked = reviewQuestion.selectedAnswerIds.includes(option.id)
+              return <div key={option.id} className={`review-option ${option.isCorrect ? 'is-correct' : ''} ${picked && !option.isCorrect ? 'is-wrong' : ''}`}>
+                {LETTERS[i] || i + 1}. {option.content}
+                {picked && <Tag color={option.isCorrect ? 'green' : 'red'} className="ml-2">Câu trả lời của bạn</Tag>}
+                {option.isCorrect && <Tag color="green" className="ml-2">Đáp án đúng</Tag>}
+              </div>
+            })}
+            {reviewQuestionState(reviewQuestion) === 'empty' && <Typography.Text type="secondary">Bạn chưa trả lời câu này.</Typography.Text>}
+            <div className="attempt-question__footer">
+              <span />
+              <Space>
+                <Button icon={<LeftOutlined />} disabled={reviewCurrent === 0} onClick={() => setReviewIndex(reviewCurrent - 1)}>Câu trước</Button>
+                <Button type="primary" disabled={reviewCurrent >= reviewQuestions.length - 1}
+                  onClick={() => setReviewIndex(reviewCurrent + 1)}>Câu tiếp theo <RightOutlined /></Button>
+              </Space>
+            </div>
+          </Card>
+        </div>}
         <div className="attempt-links"><Link to="/student/attempts">Xem lịch sử lượt thi →</Link></div>
       </>}
     </>}
