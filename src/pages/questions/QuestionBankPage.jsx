@@ -201,7 +201,7 @@ export default function QuestionBankPage() {
       <h2 className="page-section-title">Nhập / xuất Excel</h2>
       <div className="page-toolbar">
         <Button icon={<DownloadOutlined />} onClick={() => downloadQuestionTemplate().catch((failure) => setError(getApiError(failure)))}>Tải mẫu Excel v1</Button>
-        <input type="file" accept=".xlsx" aria-label="Chọn file câu hỏi Excel" onChange={(event) => {
+        <input type="file" className="file-input" accept=".xlsx" aria-label="Chọn file câu hỏi Excel" onChange={(event) => {
           setImportFile(event.target.files?.[0] || null); setImportErrors([])
         }} />
         <Button type="primary" icon={<UploadOutlined />} disabled={!importFile} loading={saving} onClick={upload}>Nhập câu hỏi</Button>
