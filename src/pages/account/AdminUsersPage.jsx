@@ -14,7 +14,6 @@ import { resendVerification } from '../../services/authService'
 import { downloadAccountTemplate, exportAccounts } from '../../services/accountExcelService'
 import { excelErrorMessage } from '../../services/excelFile'
 import AccountExcelImportModal from './AccountExcelImportModal'
-import './account.css'
 
 const ROLE_TONES = { 1: 'cyan', 2: 'warning', 3: 'purple', 4: 'info' }
 

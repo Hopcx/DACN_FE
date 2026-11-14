@@ -30,3 +30,16 @@ export function formatDuration(seconds) {
 export function reviewQuestionState(question) {
   return Array.isArray(question?.selectedAnswerIds) && question.selectedAnswerIds.length > 0 ? 'answered' : 'empty'
 }
+
+const VOID_MESSAGES = {
+  VOID_REASON_REQUIRED: 'Nhập lý do hủy kết quả (tối đa 1000 ký tự).',
+  ATTEMPT_NOT_FOUND: 'Không tìm thấy lượt thi.',
+  ATTEMPT_ALREADY_VOIDED: 'Lượt thi này đã bị hủy trước đó.',
+  ATTEMPT_NOT_FINALIZED: 'Lượt thi chưa kết thúc nên chưa thể hủy kết quả.',
+}
+
+/** Thông báo tiếng Việt cho lỗi hủy kết quả; mã BE: VOID_REASON_REQUIRED, ATTEMPT_NOT_FOUND, ATTEMPT_ALREADY_VOIDED, ATTEMPT_NOT_FINALIZED. Mã khác → getApiError(error). */
+export function voidErrorMessage(error) {
+  const code = error?.response?.data?.message
+  return (typeof code === 'string' && VOID_MESSAGES[code]) || getApiError(error)
+}
