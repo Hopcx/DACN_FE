@@ -5,7 +5,8 @@ import './adminDashboard.css'
 export default function AdminAttemptsPage() {
   return (
     <section className="admin-dashboard">
-      <PageHeader title="Danh sách bài làm" description="Theo dõi lượt thi, lọc theo lịch thi, lớp, học viên và hủy lượt thi khi cần." />
+      <PageHeader title="Báo cáo lượt thi"
+        description="Theo dõi lượt thi, lọc theo bài thi, lớp, môn học và hủy kết quả khi cần. Tỷ lệ đạt và phổ điểm chỉ tính lượt DACN đã chốt chưa bị hủy." />
       <AdminAttemptReport />
     </section>
   )
