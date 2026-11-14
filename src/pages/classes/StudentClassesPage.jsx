@@ -38,11 +38,11 @@ export default function StudentClassesPage() {
     finally { setSaving(false) }
   }
 
-  if (!isStudent) return <Alert type="error" message="Trang này dành cho học viên." />
+  if (!isStudent) return <Alert type="error" showIcon title="Trang này dành cho học viên." />
   return <section className="page-body">
     <PageHeader title="Lớp học của tôi" />
-    {error && <Alert type="error" showIcon message={error} className="mb-4" />}
-    {message && <Alert type="success" showIcon message={message} className="mb-4" />}
+    {error && <Alert type="error" showIcon title={error} className="mb-4" />}
+    {message && <Alert type="success" showIcon title={message} className="mb-4" />}
     <Form form={form} layout="inline" onFinish={join} className="mb-4">
       <Form.Item name="classCode" rules={[{ required: true, message: 'Nhập mã lớp' }]}>
         <Input placeholder="Mã lớp học" maxLength={100} />

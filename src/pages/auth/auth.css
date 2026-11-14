@@ -29,6 +29,7 @@
 @media (max-width: 520px) { .auth-card { padding: 26px 20px; } }
 
 .auth-card--wide { width: 520px; }
+@media (max-width: 560px) { .auth-card, .auth-card--wide { width: 100%; } }
 .auth-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .auth-date { width: 100%; padding: 9px 12px; border-radius: 10px; }
 .auth-switch { margin: 4px 0 0; text-align: center; color: #475569; }
