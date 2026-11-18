@@ -25,4 +25,5 @@ export const ROUTES = {
   teacherOverview: '/teacher/overview',
   audit: '/admin/audit',
   mySchedules: '/student/schedules',
+  myPractice: '/student/practice',
 }

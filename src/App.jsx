@@ -28,6 +28,8 @@ const AdminSchedulesPage = lazy(() => import('./pages/schedules/AdminSchedulesPa
 const StudentSchedulesPage = lazy(() => import('./pages/schedules/StudentSchedulesPage'))
 const StudentAttemptPage = lazy(() => import('./pages/attempts/StudentAttemptPage'))
 const StudentAttemptHistoryPage = lazy(() => import('./pages/attempts/StudentAttemptHistoryPage'))
+const PracticePage = lazy(() => import('./pages/practice/PracticePage'))
+const PracticeSessionPage = lazy(() => import('./pages/practice/PracticeSessionPage'))
 
 export default function App() {
   return (
@@ -66,6 +68,8 @@ export default function App() {
           <Route path="schedules" element={<StudentSchedulesPage />} />
           <Route path="attempts/:id" element={<StudentAttemptPage />} />
           <Route path="attempts" element={<StudentAttemptHistoryPage />} />
+          <Route path="practice" element={<PracticePage />} />
+          <Route path="practice/:id" element={<PracticeSessionPage />} />
         </Route>
         <Route path="teacher" element={<RequireLevel levels={[3]} />}>
           <Route path="profile" element={<ProfilePage />} />
