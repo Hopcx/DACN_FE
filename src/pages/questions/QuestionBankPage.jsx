@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
-import { Alert, Button, Checkbox, Col, Form, Input, Modal, Popconfirm, Row, Select, Space, Table, Typography } from 'antd'
+import { Alert, Button, Checkbox, Col, Form, Input, Modal, Popconfirm, Row, Select, Space, Table, Tag, Tooltip, Typography } from 'antd'
 import { DeleteOutlined, DownloadOutlined, EditOutlined, EyeInvisibleOutlined, EyeOutlined, FileExcelOutlined,
   PlusOutlined, ReloadOutlined, UploadOutlined } from '@ant-design/icons'
 import PageHeader from '../../components/ui/PageHeader'
@@ -8,8 +8,10 @@ import PageCard from '../../components/ui/PageCard'
 import StatusTag from '../../components/ui/StatusTag'
 import { LoadError, TableEmpty } from '../../components/ui/PageState'
 import { getApiError, toLoadError } from '../../api/response'
-import { createQuestion, deleteQuestion, downloadQuestionTemplate, getQuestionLevels, getQuestions, getQuestionSubjects,
-  getQuestionTypes, importQuestions, updateQuestion, exportQuestions } from '../../services/questionService'
+import { createQuestion, createTag, deleteQuestion, downloadQuestionTemplate, getChapters, getQuestionLevels, getQuestions,
+  getQuestionSubjects, getQuestionTypes, getTags, importQuestions, updateQuestion, exportQuestions } from '../../services/questionService'
+import { chapterProblem, duplicateTagId, EXPLANATION_MAX, MAX_TAGS, metadataOptions, normalizeTagName, questionBody,
+  restoreBody, tagKey, tagProblem, tagSummary } from '../../services/questionMetadata'
 import { excelErrorMessage } from '../../services/excelFile'
 import { clampPage, rowNumber, showTotalLabel, statusView } from '../../services/listView'
 
@@ -39,7 +41,14 @@ export default function QuestionBankPage() {
   const [importNotice, setImportNotice] = useState('')
   const [exportErrors, setExportErrors] = useState([])
   const [exporting, setExporting] = useState(false)
+  // To-be T3: chương/tag tải kèm mục đã ẩn để hiển thị tên của câu đang gắn
+  const [chapters, setChapters] = useState([])
+  const [tags, setTags] = useState([])
+  const [tagSearch, setTagSearch] = useState('')
+  const [creatingTag, setCreatingTag] = useState(false)
   const requestRef = useRef(0)
+  // Mỗi lần mở/đóng form là một phiên; kết quả tạo tag về muộn không ghi vào form của phiên khác
+  const formSessionRef = useRef(0)
 
   const load = useCallback(async () => {
     if (!allowed) return
@@ -63,14 +72,55 @@ export default function QuestionBankPage() {
       .catch((failure) => setError(getApiError(failure)))
   }, [allowed])
 
+  const loadMetadata = useCallback(async () => {
+    if (!allowed) return
+    try {
+      const [a, b] = await Promise.all([getChapters({ includeHidden: true }), getTags({ includeHidden: true })])
+      setChapters(a); setTags(b)
+    } catch (failure) { setError(getApiError(failure)) }
+  }, [allowed])
+  useEffect(() => { loadMetadata() }, [loadMetadata])
+
   function showForm(item) {
-    setEditing(item || null); setFormError('')
-    form.setFieldsValue(item ? { ...item, answers: item.answers.map(({ content, isCorrect }) => ({ content, isCorrect })) }
-      : { content: '', status: 1, answers: defaultAnswers() })
+    formSessionRef.current += 1
+    setEditing(item || null); setFormError(''); setTagSearch('')
+    // Xóa trắng trước: form Thêm không mang theo môn/chương/tag của câu vừa sửa
+    form.resetFields()
+    form.setFieldsValue(item ? {
+      ...item, explanation: item.explanation ?? '', tagIds: item.tagIds ?? [], chapterId: item.chapterId ?? undefined,
+      answers: item.answers.map(({ content, isCorrect }) => ({ content, isCorrect })),
+    } : { content: '', status: 1, explanation: '', tagIds: [], answers: defaultAnswers() })
     setOpen(true)
   }
 
+  // Gõ tên tag chưa có → mục "Tạo tag"; 409 (trùng sau chuẩn hóa) → chọn tag có sẵn theo id
+  async function pickTags(values) {
+    const pending = values.find((x) => typeof x === 'string' && x.startsWith('new:'))
+    if (!pending) { form.setFieldValue('tagIds', values); return }
+    const rest = values.filter((x) => x !== pending)
+    const name = normalizeTagName(pending.slice(4))
+    const session = formSessionRef.current
+    const current = () => session === formSessionRef.current
+    // Bỏ giá trị tạm "new:…" khỏi form ngay; nút OK bị khóa đến khi tạo xong
+    form.setFieldValue('tagIds', rest)
+    setCreatingTag(true); setFormError('')
+    try {
+      const created = await createTag(name)
+      setTags((old) => [...old, created])
+      if (current()) form.setFieldValue('tagIds', [...new Set([...(form.getFieldValue('tagIds') || []), created.id])])
+    } catch (failure) {
+      const id = failure.response?.status === 409 ? duplicateTagId(failure.response?.data?.message) : null
+      const existing = id && (await getTags({ includeHidden: true }).catch(() => null))
+      if (existing) setTags(existing)
+      const found = existing?.find((x) => x.id === id)
+      if (!current()) return
+      if (found?.status === 1) form.setFieldValue('tagIds', [...new Set([...(form.getFieldValue('tagIds') || []), id])])
+      else { setFormError(found ? `Tag “${found.name}” đã bị ẩn hoặc ngừng dùng.` : getApiError(failure)) }
+    } finally { setCreatingTag(false); setTagSearch('') }
+  }
+
   async function save(values) {
+    if (creatingTag) return
     const answers = (values.answers || []).map((x) => ({ content: x.content?.trim(), isCorrect: Boolean(x.isCorrect) }))
     const correct = answers.filter((x) => x.isCorrect).length
     if (answers.length < 2 || answers.length > 20 || answers.some((x) => !x.content) ||
@@ -82,11 +132,13 @@ export default function QuestionBankPage() {
       setFormError('Tập đáp án không hợp lệ cho loại câu hỏi. Cần nội dung khác nhau và số đáp án đúng phù hợp.')
       return
     }
+    const problem = chapterProblem(values.chapterId, chapters) || tagProblem(values.tagIds)
+    if (problem) { setFormError(problem); return }
     setSaving(true); setFormError('')
     try {
-      const body = { ...values, content: values.content.trim(), answers }
-      // PUT thay toàn bộ câu hỏi (contract 01-http.md): gửi lại documentPath để không bị xóa
-      if (editing) await updateQuestion(editing.id, { ...body, documentPath: editing.documentPath ?? null })
+      // PUT thay toàn bộ câu hỏi (contract To-be T2): questionBody luôn gửi documentPath, chapterId, explanation, tagIds
+      const body = questionBody({ ...values, answers }, editing)
+      if (editing) await updateQuestion(editing.id, body)
       else await createQuestion(body)
       setOpen(false); await load()
     } catch (failure) { setFormError(getApiError(failure)) }
@@ -99,15 +151,14 @@ export default function QuestionBankPage() {
     catch (failure) { setError(getApiError(failure)) }
   }
 
-  // Bỏ ẩn: BE nhận lại toàn bộ câu hỏi với status 1 (câu đã ẩn luôn là câu chưa dùng trong đề)
+  // Bỏ ẩn: BE nhận lại toàn bộ câu hỏi với status 1 (câu đã ẩn luôn là câu chưa dùng trong đề).
+  // restoreBody giữ chương/tag/lời giải; chương đã ẩn không gắn lại được nên bị bỏ và báo cho người dùng.
   async function restore(item) {
-    setError('')
+    setError(''); setImportNotice('')
     try {
-      await updateQuestion(item.id, {
-        subjectId: item.subjectId, questionTypeId: item.questionTypeId, questionLevelId: item.questionLevelId,
-        content: item.content, status: 1, documentPath: item.documentPath ?? null,
-        answers: item.answers.map(({ content, isCorrect }) => ({ content, isCorrect })),
-      })
+      const { body, droppedChapter } = restoreBody(item, chapters)
+      await updateQuestion(item.id, body)
+      if (droppedChapter) setImportNotice('Đã hiện lại câu hỏi; chương cũ đã bị ẩn nên câu được bỏ chương.')
       await load()
     } catch (failure) { setError(getApiError(failure)) }
   }
@@ -147,7 +198,19 @@ export default function QuestionBankPage() {
   const choices = (items) => items.filter((x) => x.status === true || x.status === 1 || x.status == null)
     .map((x) => ({ value: x.id, label: x.name }))
   const currentPage = clampPage(page, 10, questions.length)
-  const filtered = Boolean(filters.textSearch || filters.subjectId || filters.questionTypeId || filters.questionLevelId)
+  const filtered = Boolean(filters.textSearch || filters.subjectId || filters.questionTypeId || filters.questionLevelId ||
+    filters.chapterId || filters.tagIds?.length)
+  const chaptersOf = (subjectId) => chapters.filter((x) => x.subjectId === subjectId)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
+  const chapterName = (id) => chapters.find((x) => x.id === id)?.name
+  // Tag: gõ tên chưa có (so theo khóa chuẩn hóa) thì thêm mục "Tạo tag" ở đầu danh sách
+  const typedTag = normalizeTagName(tagSearch)
+  const tagChoicesFor = (selected) => {
+    const list = metadataOptions(tags, selected || [])
+    if (typedTag && typedTag.length <= 50 && !tags.some((x) => tagKey(x.name) === tagKey(typedTag)))
+      list.unshift({ value: `new:${typedTag}`, label: `Tạo tag “${typedTag}”` })
+    return list
+  }
 
   return <section className="page-body">
     <PageHeader title="Ngân hàng câu hỏi" description="Quản lý, chỉnh sửa và sử dụng câu hỏi cho các bài thi." />
@@ -161,24 +224,42 @@ export default function QuestionBankPage() {
         {/* Smoke P4 chọn Select đầu tiên có chữ "Môn học": giữ placeholder và vị trí này */}
         <Select allowClear placeholder="Môn học" aria-label="Lọc theo môn học" style={{ minWidth: 200 }} popupMatchSelectWidth={false}
           showSearch={{ optionFilterProp: 'label' }} virtual={false} options={choices(subjects)}
-          onChange={(subjectId) => changeExportFilter({ subjectId })} />
+          onChange={(subjectId) => changeExportFilter({ subjectId, chapterId: undefined })} />
         <Select allowClear placeholder="Mức độ" aria-label="Lọc theo mức độ" style={{ minWidth: 140 }} options={choices(levels)}
           onChange={(questionLevelId) => changeExportFilter({ questionLevelId })} />
         <Select allowClear placeholder="Loại" aria-label="Lọc theo loại câu hỏi" style={{ minWidth: 170 }}
           options={choices(types).filter((x) => x.value <= 3)}
           onChange={(questionTypeId) => changeExportFilter({ questionTypeId })} />
+        <Select allowClear placeholder="Chương" aria-label="Lọc theo chương" style={{ minWidth: 170 }} popupMatchSelectWidth={false}
+          disabled={!filters.subjectId} title={filters.subjectId ? undefined : 'Chọn môn học để lọc theo chương'}
+          value={filters.chapterId} options={metadataOptions(chaptersOf(filters.subjectId), filters.chapterId)
+            .map((x) => ({ ...x, disabled: false }))}
+          onChange={(chapterId) => changeExportFilter({ chapterId })} />
+        <Select mode="multiple" allowClear placeholder="Tag" aria-label="Lọc theo tag" style={{ minWidth: 180 }} maxTagCount="responsive"
+          popupMatchSelectWidth={false} showSearch={{ optionFilterProp: 'label' }}
+          options={metadataOptions(tags, filters.tagIds || []).map((x) => ({ ...x, disabled: false }))}
+          onChange={(tagIds) => changeExportFilter({ tagIds: tagIds.length ? tagIds : undefined })} />
         <div className="page-toolbar__end">
           <Button icon={<ReloadOutlined />} onClick={load} loading={loading}>Tải lại</Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => showForm(null)}>Thêm câu hỏi</Button>
         </div>
       </div>
-      <Table rowKey="id" size="middle" loading={loading} dataSource={questions} scroll={{ x: 1100 }}
+      <Table rowKey="id" size="middle" loading={loading} dataSource={questions} scroll={{ x: 1440 }}
         pagination={{ current: currentPage, pageSize: 10, showSizeChanger: false, onChange: setPage, showTotal: showTotalLabel('câu hỏi') }}
         locale={{ emptyText: <TableEmpty error={Boolean(loadError)} errorLabel="Không tải được dữ liệu." filtered={filtered}
           emptyLabel="Chưa có câu hỏi" filteredLabel="Không có câu hỏi khớp bộ lọc" /> }} columns={[
           { title: 'STT', key: 'stt', width: 64, align: 'center', render: (_, __, index) => rowNumber(currentPage, 10, index) },
           { title: 'Nội dung câu hỏi', dataIndex: 'content', width: 320, ellipsis: { showTitle: true } },
           { title: 'Môn học', dataIndex: 'subjectId', width: 160, render: (id) => label(subjects, id) },
+          { title: 'Chương', dataIndex: 'chapterId', width: 160, ellipsis: { showTitle: true },
+            render: (id) => (id == null ? '—' : chapterName(id) ?? `#${id}`) },
+          { title: 'Tag', dataIndex: 'tagIds', width: 200, render: (ids) => {
+            const view = tagSummary(ids, tags)
+            if (!view.all.length) return '—'
+            return <Tooltip title={view.more ? view.all.join(', ') : undefined}><span>
+              {view.shown.map((name) => <Tag key={name}>{name}</Tag>)}{view.more > 0 && <Tag>+{view.more}</Tag>}
+            </span></Tooltip>
+          } },
           { title: 'Mức độ', dataIndex: 'questionLevelId', width: 120, render: (id) => id == null ? '—'
             : <StatusTag tone={LEVEL_TONES[id] || 'default'}>{label(levels, id)}</StatusTag> },
           { title: 'Dạng câu hỏi', dataIndex: 'questionTypeId', width: 170, render: (id) => label(types, id) },
@@ -214,7 +295,7 @@ export default function QuestionBankPage() {
         </Popconfirm>
       </div>
       <Typography.Text type="secondary" className="mb-4 block">
-        Xuất theo môn, loại, mức độ đang lọc; không áp dụng ô tìm nội dung. Câu đã ẩn không được xuất.
+        Xuất theo môn, loại, mức độ đang lọc; không áp dụng ô tìm nội dung, chương và tag. Câu đã ẩn không được xuất.
       </Typography.Text>
       {importErrors.length > 0 && <Table rowKey={(_, index) => index} size="small" pagination={{ pageSize: 10 }}
         dataSource={importErrors} columns={[
@@ -234,9 +315,12 @@ export default function QuestionBankPage() {
       </>}
     </PageCard>
     <Modal title={editing ? 'Sửa câu hỏi và đáp án' : 'Thêm câu hỏi và đáp án'} open={open}
-      onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={saving} width={760} destroyOnHidden>
+      onCancel={() => { formSessionRef.current += 1; setOpen(false) }} onOk={() => form.submit()} confirmLoading={saving}
+      okButtonProps={{ disabled: creatingTag }} width={760} destroyOnHidden>
       {formError && <Alert type="error" showIcon title={formError} className="page-alert" />}
       <Form form={form} layout="vertical" onFinish={save} onValuesChange={(changed) => {
+        // Chương phụ thuộc môn: đổi môn thì bỏ chương
+        if ('subjectId' in changed) form.setFieldValue('chapterId', undefined)
         if (changed.questionTypeId === 1) form.setFieldValue('answers', [
           { content: 'Đúng', isCorrect: true }, { content: 'Sai', isCorrect: false },
         ])
@@ -259,8 +343,38 @@ export default function QuestionBankPage() {
         <Form.Item name="questionTypeId" label="Loại câu hỏi" rules={[{ required: true, message: 'Chọn loại câu hỏi' }]}>
           <Select options={choices(types).filter((x) => x.value <= 3)} />
         </Form.Item>
+        <Row gutter={12}>
+          {/* Chương/tag phụ thuộc giá trị form: render theo dependencies (tránh Form.useWatch khi modal chưa mở) */}
+          <Form.Item noStyle dependencies={['subjectId', 'chapterId', 'tagIds']}>{({ getFieldValue }) => {
+            const formSubjectId = getFieldValue('subjectId')
+            const formChapterId = getFieldValue('chapterId')
+            const formChapterProblem = chapterProblem(formChapterId, chapters)
+            return <>
+              <Col xs={24} md={10}>
+                <Form.Item name="chapterId" label="Chương" validateStatus={formChapterProblem ? 'error' : undefined}
+                  help={formChapterProblem || (formSubjectId ? undefined : 'Chọn môn học trước')}>
+                  <Select allowClear placeholder="Không thuộc chương" disabled={!formSubjectId}
+                    options={metadataOptions(chaptersOf(formSubjectId), formChapterId)} />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={14}>
+                <Form.Item name="tagIds" label={`Tag (tối đa ${MAX_TAGS})`} getValueProps={(value) => ({ value: value || [] })}>
+                  <Select mode="multiple" placeholder="Tìm hoặc gõ tên để tạo tag" maxCount={MAX_TAGS} loading={creatingTag}
+                    disabled={creatingTag} options={tagChoicesFor(getFieldValue('tagIds'))} onChange={pickTags} onBlur={() => setTagSearch('')}
+                    showSearch={{
+                      searchValue: tagSearch, onSearch: (value) => setTagSearch(value.slice(0, 50)),
+                      filterOption: (input, option) => String(option.value).startsWith('new:') || tagKey(option.label).includes(tagKey(input)),
+                    }} />
+                </Form.Item>
+              </Col>
+            </>
+          }}</Form.Item>
+        </Row>
         <Form.Item name="content" label="Nội dung" rules={[{ required: true, whitespace: true, message: 'Nhập nội dung câu hỏi' }]}>
           <Input.TextArea rows={3} maxLength={4000} />
+        </Form.Item>
+        <Form.Item name="explanation" label="Lời giải (không bắt buộc)">
+          <Input.TextArea rows={3} maxLength={EXPLANATION_MAX} showCount placeholder="Giải thích đáp án đúng" />
         </Form.Item>
         <Typography.Title level={5}>Đáp án</Typography.Title>
         <Form.List name="answers">{(fields, { add, remove: removeAnswer }) => <>

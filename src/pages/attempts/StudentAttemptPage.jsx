@@ -324,6 +324,11 @@ export default function StudentAttemptPage() {
               </div>
             })}
             {reviewQuestionState(reviewQuestion) === 'empty' && <Typography.Text type="secondary">Bạn chưa trả lời câu này.</Typography.Text>}
+            {/* To-be T4: lời giải chụp trong snapshot v2; lượt cũ (v1) hoặc câu không có lời giải → không hiện */}
+            {reviewQuestion.explanation && <div className="review-explanation">
+              <Typography.Text strong>Lời giải</Typography.Text>
+              <Typography.Paragraph className="review-explanation__text">{reviewQuestion.explanation}</Typography.Paragraph>
+            </div>}
             <div className="attempt-question__footer">
               <span />
               <Space>

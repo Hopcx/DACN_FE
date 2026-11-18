@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Alert, Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Table } from 'antd'
-import { DeleteOutlined, EditOutlined, EyeInvisibleOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, EyeInvisibleOutlined, OrderedListOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
+import ChapterModal from './ChapterModal'
 import PageHeader from '../../components/ui/PageHeader'
 import PageCard from '../../components/ui/PageCard'
 import StatusTag from '../../components/ui/StatusTag'
@@ -52,6 +53,7 @@ export default function CatalogPage({ kind }) {
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
   const [subjectsActiveOnly, setSubjectsActiveOnly] = useState(true)
+  const [chapterSubject, setChapterSubject] = useState(null)
   const requestRef = useRef(0)
   const allowed = kind === 'levels' || kind === 'permissions' ? String(user?.levelId) === '1'
     : String(user?.levelId) === '1' || (user?.permissions || []).some((id) => String(id) === (kind === 'subjects' ? '3' : '4'))
@@ -126,8 +128,10 @@ export default function CatalogPage({ kind }) {
       }
       return column
     }),
-    { title: 'Thao tác', key: 'actions', width: 170, render: (_, item) => <div className="page-actions">
+    { title: 'Thao tác', key: 'actions', width: kind === 'subjects' ? 250 : 170, render: (_, item) => <div className="page-actions">
       <Button size="small" icon={<EditOutlined />} onClick={() => show(item)}>Sửa</Button>
+      {kind === 'subjects' && item.status !== 255 &&
+        <Button size="small" icon={<OrderedListOutlined />} onClick={() => setChapterSubject(item)}>Chương</Button>}
       {(!['levels', 'permissions'].includes(kind) || item.id > 4) &&
         !(kind === 'subjects' && item.status === 255) &&
         <Popconfirm title={kind === 'subjects' ? 'Ngừng hiển thị môn này?' : 'Xóa mục này?'} onConfirm={() => remove(item.id)}>
@@ -180,5 +184,8 @@ export default function CatalogPage({ kind }) {
         </Form.Item>)}
       </Form>
     </Modal>
+    {/* key theo môn: mỗi môn một phiên modal, không giữ chương/lỗi/bộ lọc của môn trước */}
+    {kind === 'subjects' && chapterSubject && <ChapterModal key={chapterSubject.id} subject={chapterSubject}
+      onClose={() => setChapterSubject(null)} />}
   </section>
 }
