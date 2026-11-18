@@ -2,7 +2,7 @@ import axiosClient from '../api/axiosClient'
 import { readPayload } from '../api/response'
 import { downloadFile } from '../api/download'
 
-export const getQuestions = async (params) => readPayload(await axiosClient.get('/questions', { params }))
+export const getQuestions = async (params) => readPayload(await axiosClient.get('/questions', { params, paramsSerializer: { indexes: null } }))
 export const createQuestion = async (body) => readPayload(await axiosClient.post('/questions', body))
 export const updateQuestion = async (id, body) => readPayload(await axiosClient.put(`/questions/${id}`, body))
 export const deleteQuestion = async (id) => readPayload(await axiosClient.delete(`/questions/${id}`))
@@ -27,3 +27,13 @@ export const exportQuestions = ({ subjectId, questionTypeId, questionLevelId }) 
   params: Object.fromEntries(Object.entries({ subjectId, questionTypeId, questionLevelId }).filter(([, value]) => value != null)),
   fileName: `dacn-questions-v1-subject-${subjectId}.xlsx`,
 })
+
+// To-be T3: chương, tag (contract To-be T2). getQuestions gửi tagIds dạng lặp (tagIds=1&tagIds=2) để ASP.NET bind List<int>.
+export const getChapters = async ({ subjectId, includeHidden } = {}) =>
+  readPayload(await axiosClient.get('/chapters', { params: { subjectId, includeHidden } }))
+export const createChapter = async (body) => readPayload(await axiosClient.post('/chapters', body))
+export const updateChapter = async (id, body) => readPayload(await axiosClient.put(`/chapters/${id}`, body))
+export const hideChapter = async (id) => readPayload(await axiosClient.delete(`/chapters/${id}`))
+export const getTags = async ({ textSearch, includeHidden } = {}) =>
+  readPayload(await axiosClient.get('/tags', { params: { textSearch, includeHidden } }))
+export const createTag = async (name) => readPayload(await axiosClient.post('/tags', { name }))
