@@ -3,7 +3,7 @@ import { Suspense, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Avatar, Dropdown } from 'antd'
 import {
-  ApartmentOutlined, AppstoreOutlined, BankOutlined, BarChartOutlined, BookOutlined, CalendarOutlined, DashboardOutlined, FileTextOutlined,
+  ApartmentOutlined, AppstoreOutlined, BankOutlined, BarChartOutlined, BookOutlined, CalendarOutlined, DashboardOutlined, ExperimentOutlined, FileTextOutlined,
   FileSearchOutlined, HistoryOutlined, HomeOutlined, KeyOutlined, LogoutOutlined, MenuOutlined, QuestionCircleOutlined,
   ReadOutlined, SafetyOutlined, ScheduleOutlined, SolutionOutlined, TeamOutlined, UserOutlined,
 } from '@ant-design/icons'
@@ -19,6 +19,7 @@ const ROLE_LABELS = { 1: 'Quản trị viên', 2: 'Người ra đề', 3: 'Giả
 const STUDENT_NAV = [
   { to: ROUTES.myClasses, label: 'Lớp', icon: <ReadOutlined /> },
   { to: ROUTES.mySchedules, label: 'Lịch thi', icon: <ScheduleOutlined /> },
+  { to: ROUTES.myPractice, label: 'Luyện tập', icon: <ExperimentOutlined /> },
   { to: '/student/attempts', label: 'Bài đã làm', icon: <HistoryOutlined /> },
 ]
 

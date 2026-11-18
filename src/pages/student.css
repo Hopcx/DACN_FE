@@ -109,6 +109,15 @@
 /* To-be T4: khối lời giải trong phần xem lại */
 .review-explanation { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: #f8fafc; border-left: 3px solid #0f766e; }
 .review-explanation__text { margin: 4px 0 0 !important; white-space: pre-wrap; }
+/* To-be T7: bảng câu Luyện tập — đã trả lời (chưa kiểm tra) xanh dương, đúng xanh lá, sai đỏ */
+.dot--pending { background: #2563eb; border-color: #2563eb; }
+.dot--right { background: #22a06b; border-color: #22a06b; }
+.dot--wrong { background: #dc2626; border-color: #dc2626; }
+.palette-item.is-pending { background: #2563eb; border-color: #2563eb; color: #fff; }
+.palette-item.is-right { background: #22a06b; border-color: #22a06b; color: #fff; }
+.palette-item.is-wrong { background: #dc2626; border-color: #dc2626; color: #fff; }
+.palette-item.is-pending.is-current, .palette-item.is-right.is-current, .palette-item.is-wrong.is-current { outline: 2px solid #1d4ed8; outline-offset: 2px; }
+.practice-score { font-size: 18px; color: #0f766e; }
 
 .history-toolbar { margin-bottom: 12px; }
 .history-exam, .history-state, .history-score { display: flex; flex-direction: column; gap: 2px; }
