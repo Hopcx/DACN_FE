@@ -118,6 +118,8 @@
 .palette-item.is-wrong { background: #dc2626; border-color: #dc2626; color: #fff; }
 .palette-item.is-pending.is-current, .palette-item.is-right.is-current, .palette-item.is-wrong.is-current { outline: 2px solid #1d4ed8; outline-offset: 2px; }
 .practice-score { font-size: 18px; color: #0f766e; }
+/* To-be T8: công tắc "Chỉ câu đã đánh dấu" ở xem lại */
+.review-flag-filter { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; cursor: pointer; }
 
 .history-toolbar { margin-bottom: 12px; }
 .history-exam, .history-state, .history-score { display: flex; flex-direction: column; gap: 2px; }

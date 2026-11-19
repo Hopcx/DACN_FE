@@ -160,6 +160,22 @@ try {
   await page.waitText('Đáp án đúng'); await page.noErrorAlert('review end')
   pass('Cuối phiên: trả lời 2 câu, nộp, xem lại 2/2 có đáp án đúng và lời giải')
 
+  // To-be T8: bấm nhanh liên tiếp (xếp hàng theo câu) — server phải khớp lần bấm cuối
+  const endId = endPath.split('/').pop()
+  const serverFlags = () => page.eval(`(async () => { const client = (await import('/src/api/axiosClient.js')).default
+    return (await client.get('/review-flags', { params: { sourceKind: 'practice', sourceId: ${JSON.stringify(endId)} } })).data.data.questionIds.length })()`)
+  const clickFlagButton = (times) => page.eval(`(() => { for (let i = 0; i < ${times}; i += 1) {
+    const button = [...document.querySelectorAll('.attempt-question button')].find((x) => ['Đánh dấu', 'Bỏ đánh dấu'].includes(x.innerText.trim()))
+    button.click() } return true })()`)
+  await clickFlagButton(2)
+  await page.waitText('Đánh dấu')
+  await pause(1500)
+  if ((await serverFlags()) !== 0) throw new Error('Đánh dấu → bỏ nhanh: server vẫn còn cờ.')
+  await clickFlagButton(3)
+  await eventually(async () => (await serverFlags()) === 1, 'three fast clicks end flagged')
+  await page.waitText('Bỏ đánh dấu')
+  pass('T8: bấm đánh dấu nhanh liên tiếp, server khớp lần bấm cuối')
+
   // ---- Phiên "Từng câu": câu 1 đúng, tải lại vẫn thấy, câu 2 sai, nộp → 1/2
   await page.go('/student/practice')
   await page.waitText('Tạo phiên luyện tập')
@@ -171,7 +187,17 @@ try {
   await eventually(() => page.eval(`[...document.querySelectorAll('.attempt-question .ant-tag')].some((x) => x.innerText.trim() === 'Đúng')`), 'tag Đúng')
   if (await page.eval(`!!document.querySelector('.attempt-question .ant-radio-wrapper')`)) throw new Error('Câu đã kiểm tra vẫn chọn lại được.')
   pass('Từng câu: kiểm tra câu 1 → Đúng, đáp án đúng, lời giải, khóa lựa chọn')
+  // To-be T8: đánh dấu câu 1 (lưu ở server) trước khi tải lại
+  await page.click('Đánh dấu', '.attempt-question')
+  await page.waitText('Bỏ đánh dấu')
+  // Chờ server xác nhận (không dùng khoảng chờ cố định) rồi mới tải lại trang
+  await eventually(() => page.eval(`(async () => { const client = (await import('/src/api/axiosClient.js')).default
+    const data = (await client.get('/review-flags', { params: { sourceKind: 'practice', sourceId: ${JSON.stringify(pqPath.split('/').pop())} } })).data.data
+    return data.questionIds.length === 1 })()`), 'flag saved on server')
   await page.go(pqPath, true)
+  await page.waitText('Bỏ đánh dấu', 'đánh dấu còn sau khi tải lại')
+  if (!(await page.eval(`!!document.querySelector('.palette-item.is-flagged')`))) throw new Error('Bảng câu không hiện cờ đánh dấu.')
+  pass('T8: đánh dấu câu lưu ở server, còn sau khi tải lại')
   await page.waitText(`EXPL-${tag} ${first.split(' ').pop()}`, 'lời giải còn sau khi tải lại')
   pass('tải lại trang vẫn thấy kết quả câu đã kiểm tra')
   await page.click('Câu sau')
@@ -182,6 +208,11 @@ try {
   await page.click('Nộp bài', '.attempt-actions'); await page.modalOk()
   await eventually(() => page.eval(`document.querySelector('.practice-score')?.innerText.trim() === '1/2'`), 'kết quả 1/2')
   await page.noErrorAlert('review perQuestion')
+  // To-be T8: xem lại → "Chỉ câu đã đánh dấu" chỉ còn 1 ô, đúng câu đã đánh dấu
+  await page.eval(`document.querySelector('[aria-label="Chỉ câu đã đánh dấu"]').click()`)
+  await eventually(() => page.eval(`document.querySelectorAll('.attempt-palette__grid .palette-item').length === 1`), 'filter flagged')
+  if ((await page.currentQuestion()) !== first) throw new Error('Lọc đánh dấu hiện sai câu.')
+  pass('T8: xem lại lọc "Chỉ câu đã đánh dấu"')
   pass('Từng câu: câu 2 → Sai, nộp, kết quả 1/2')
 
   // ---- Lịch sử + Làm lại bộ này
