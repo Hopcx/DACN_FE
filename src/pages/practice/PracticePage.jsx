@@ -7,7 +7,8 @@ import PageCard from '../../components/ui/PageCard'
 import StatusTag from '../../components/ui/StatusTag'
 import { getApiError } from '../../api/response'
 import { abandonPractice, createPractice, getMyPractice, getPracticeOptions, retryPractice } from '../../services/practiceService'
-import { asUtc, buildCreateBody, DEFAULT_COUNT, maxSelectable, MODE_LABELS, practiceErrorMessage, resultLabel, STATE_LABELS } from '../../services/practiceView'
+import { asUtc, buildCreateBody, DEFAULT_COUNT, KIND_LABELS, MAX_DURATION, maxSelectable, MIN_DURATION, MODE_LABELS,
+  practiceErrorMessage, resultLabel, STATE_LABELS, suggestedMinutes } from '../../services/practiceView'
 import { formatScheduleTime } from '../../services/scheduleTime'
 
 const withCount = (items) => (items || []).map((x) => ({ value: x.id, label: `${x.name} (${x.questionCount} câu)` }))
@@ -27,6 +28,10 @@ export default function PracticePage() {
   const chapterIds = Form.useWatch('chapterIds', form)
   const questionLevelIds = Form.useWatch('questionLevelIds', form)
   const tagIds = Form.useWatch('tagIds', form)
+  const kind = Form.useWatch('kind', form)
+  const questionCount = Form.useWatch('questionCount', form)
+  // To-be T9: thời lượng Thi thử theo gợi ý cho tới khi người dùng tự sửa
+  const [durationTouched, setDurationTouched] = useState(false)
 
   const loadOptions = useCallback(async () => {
     setOptionsError('')
@@ -49,6 +54,9 @@ export default function PracticePage() {
     if (subject && limit > 0 && count == null) form.setFieldValue('questionCount', Math.min(DEFAULT_COUNT, limit))
     else if (subject && limit > 0 && count > limit) form.setFieldValue('questionCount', limit)
   }, [form, subject, limit])
+  useEffect(() => {
+    if (kind === 'mock' && !durationTouched && questionCount) form.setFieldValue('durationMinutes', suggestedMinutes(questionCount))
+  }, [form, kind, questionCount, durationTouched])
 
   async function start(values) {
     setBusy(true); setError('')
@@ -72,7 +80,7 @@ export default function PracticePage() {
 
   const noSubjects = options && subjects.length === 0
   return <section className="page-body">
-    <PageHeader title="Luyện tập" description="Tự tạo bộ câu hỏi theo môn, chương, mức độ, tag và luyện không giới hạn thời gian." />
+    <PageHeader title="Luyện tập" description="Tự tạo bộ câu hỏi theo môn, chương, mức độ, tag để luyện không giới hạn thời gian, hoặc thi thử có giới hạn giờ (không tính điểm lớp)." />
     {error && <Alert type="error" showIcon title={error} className="page-alert" closable onClose={() => setError('')} />}
     {optionsError && <Alert type="error" showIcon title={optionsError} className="page-alert"
       action={<Button size="small" onClick={loadOptions}>Thử lại</Button>} />}
@@ -80,8 +88,10 @@ export default function PracticePage() {
       <h2 className="page-section-title">Tạo phiên luyện tập</h2>
       {noSubjects ? <Empty description="Bạn chưa tham gia lớp nào có môn để luyện tập." />
         : <Form form={form} layout="vertical" onFinish={start} disabled={!options || busy}
-          initialValues={{ questionCount: DEFAULT_COUNT, revealMode: 'end' }}
+          initialValues={{ questionCount: DEFAULT_COUNT, revealMode: 'end', kind: 'practice' }}
           onValuesChange={(changed) => {
+            if ('durationMinutes' in changed) setDurationTouched(true)
+            if ('kind' in changed) setDurationTouched(false)
             if ('subjectId' in changed) form.setFieldsValue({ chapterIds: [], questionLevelIds: [], tagIds: [] })
           }}>
           <Row gutter={12}>
@@ -119,16 +129,31 @@ export default function PracticePage() {
               </Form.Item>
             </Col>
             <Col xs={24} md={16}>
-              <Form.Item name="revealMode" label="Hiện đáp án">
-                <Radio.Group aria-label="Chế độ hiện đáp án" options={[
-                  { value: 'end', label: 'Cuối phiên (sau khi nộp bài)' },
-                  { value: 'perQuestion', label: 'Từng câu (bấm “Kiểm tra câu này”)' },
+              <Form.Item name="kind" label="Loại phiên">
+                <Radio.Group aria-label="Loại phiên" options={[
+                  { value: 'practice', label: 'Luyện tập (không giới hạn giờ)' },
+                  { value: 'mock', label: 'Thi thử (có giới hạn giờ)' },
                 ]} />
               </Form.Item>
             </Col>
+            {kind === 'mock'
+              ? <Col xs={24} md={8}>
+                <Form.Item name="durationMinutes" label="Thời lượng (phút)" extra="Gợi ý 1,5 phút/câu. Hết giờ bài tự nộp theo đáp án đã lưu."
+                  rules={[{ required: true, message: 'Nhập thời lượng' }]}>
+                  <InputNumber min={MIN_DURATION} max={MAX_DURATION} precision={0} className="w-full" aria-label="Thời lượng thi thử" />
+                </Form.Item>
+              </Col>
+              : <Col xs={24} md={16}>
+                <Form.Item name="revealMode" label="Hiện đáp án">
+                  <Radio.Group aria-label="Chế độ hiện đáp án" options={[
+                    { value: 'end', label: 'Cuối phiên (sau khi nộp bài)' },
+                    { value: 'perQuestion', label: 'Từng câu (bấm “Kiểm tra câu này”)' },
+                  ]} />
+                </Form.Item>
+              </Col>}
           </Row>
           <Button type="primary" htmlType="submit" icon={<RocketOutlined />} loading={busy} disabled={!subject || limit === 0}>
-            Bắt đầu luyện tập
+            {kind === 'mock' ? 'Bắt đầu thi thử' : 'Bắt đầu luyện tập'}
           </Button>
           {subject && limit === 0 && <Typography.Text type="secondary" className="ml-2">Không có câu nào khớp bộ lọc.</Typography.Text>}
         </Form>}
@@ -146,9 +171,10 @@ export default function PracticePage() {
           showTotal: (total) => `${total} phiên` }}
         columns={[
           { title: 'Môn học', dataIndex: 'subjectName', render: (value) => value || '—' },
+          { title: 'Loại', dataIndex: 'kind', width: 100, render: (value) => KIND_LABELS[value] || value },
           { title: 'Chế độ', dataIndex: 'revealMode', width: 120, render: (value) => MODE_LABELS[value] || value },
           { title: 'Trạng thái', dataIndex: 'state', width: 120,
-            render: (value) => <StatusTag tone={value === 'finished' ? 'success' : 'info'}>{STATE_LABELS[value] || value}</StatusTag> },
+            render: (value) => <StatusTag tone={value === 'finished' ? 'success' : value === 'expired' ? 'warning' : 'info'}>{STATE_LABELS[value] || value}</StatusTag> },
           { title: 'Kết quả', key: 'result', width: 100, align: 'center', render: (_, row) => resultLabel(row) },
           { title: 'Tạo lúc', dataIndex: 'createdAtUtc', width: 160, render: (value) => formatScheduleTime(asUtc(value), 'utc') },
           { title: 'Nộp lúc', dataIndex: 'finishedAtUtc', width: 160, render: (value) => (value ? formatScheduleTime(asUtc(value), 'utc') : '—') },

@@ -5,7 +5,9 @@ import { ArrowLeftOutlined, CheckCircleFilled, CheckOutlined, ClockCircleOutline
   ReloadOutlined, RightOutlined, SaveOutlined, SendOutlined } from '@ant-design/icons'
 import StatusTag from '../../components/ui/StatusTag'
 import { checkPracticeQuestion, finishPractice, getPractice, getPracticeReview, retryPractice, savePractice } from '../../services/practiceService'
-import { MODE_LABELS, paletteState, practiceErrorMessage, toCheckedMap, toDraft, toPayload } from '../../services/practiceView'
+import { KIND_LABELS, MODE_LABELS, paletteState, practiceErrorMessage, remainingSeconds, toCheckedMap, toDraft,
+  toPayload } from '../../services/practiceView'
+import { formatClock } from '../../utils/duration'
 import useReviewFlags from '../../hooks/useReviewFlags'
 import { visibleQuestions } from '../../services/reviewFlags'
 
@@ -48,12 +50,18 @@ export default function PracticeSessionPage() {
   const [flags, toggleFlag] = useReviewFlags('practice', id, { onError: setError })
   const [onlyFlagged, setOnlyFlagged] = useState(false)
   const saveRef = useRef(null)
+  // To-be T9: đồng hồ Thi thử theo máy chủ (giờ máy chủ lúc tải + thời gian đã trôi trên máy học viên)
+  const [clock, setClock] = useState(null)
+  const [tick, setTick] = useState(0)
+  const finishRef = useRef(null)
+  const autoFinishRef = useRef(false)
 
   const load = useCallback(async () => {
     setError('')
     try {
       const data = await getPractice(id)
       setSession(data); setChoices(toDraft(data.answers)); setDirty(false)
+      setClock({ serverNow: data.serverNow, at: performance.now() }); setTick(performance.now())
       setReview(data.state === 'finished' ? await getPracticeReview(id) : null)
     } catch (failure) { setError(practiceErrorMessage(failure)) }
   }, [id])
@@ -68,7 +76,7 @@ export default function PracticeSessionPage() {
   }, [dirty])
 
   // Trạng thái trên máy chủ đã khác (revision, câu đã chốt, phiên đã nộp ở tab khác): tải lại để không ghi đè
-  const RELOAD_CODES = ['CONCURRENCY_CONFLICT', 'PRACTICE_QUESTION_LOCKED', 'PRACTICE_CLOSED']
+  const RELOAD_CODES = ['CONCURRENCY_CONFLICT', 'PRACTICE_QUESTION_LOCKED', 'PRACTICE_CLOSED', 'PRACTICE_EXPIRED']
   const fail = async (failure) => {
     const message = practiceErrorMessage(failure)
     if (RELOAD_CODES.includes(failure?.response?.data?.message)) await load()
@@ -123,17 +131,38 @@ export default function PracticeSessionPage() {
   }
 
   const finish = async () => {
-    if (busy) return
+    if (busy) return false
     setConfirmOpen(false)
     const latest = dirty ? await save() : session
-    if (!latest) return
+    if (!latest) return true
     setBusy(true)
     try {
       await finishPractice(id, latest.revision)
       await load()
     } catch (failure) { await fail(failure) }
     finally { setBusy(false) }
+    return true
   }
+  finishRef.current = finish
+  const loadRef = useRef(load)
+  useEffect(() => { loadRef.current = load }, [load])
+
+  // To-be T9: Thi thử — chạy đồng hồ, hết giờ thì tự nộp với lựa chọn hiện tại (máy chủ còn cho trễ 5 giây)
+  const isMockOpen = session?.kind === 'mock' && session?.state === 'inProgress'
+  const remaining = isMockOpen && clock ? remainingSeconds(session.deadlineUtc, clock.serverNow, Math.max(0, tick - clock.at)) : null
+  const timeUp = remaining === 0
+  useEffect(() => {
+    if (!isMockOpen) return undefined
+    const timer = window.setInterval(() => setTick(performance.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [isMockOpen])
+  useEffect(() => { autoFinishRef.current = false }, [id])
+  useEffect(() => {
+    if (remaining !== 0 || busy || autoFinishRef.current) return
+    autoFinishRef.current = true
+    // Nộp lỗi (mạng/409) hoặc đang bận: sau ân hạn 5 giây tải lại từ máy chủ — GET tự chốt bài quá hạn
+    void finishRef.current?.().finally(() => window.setTimeout(() => loadRef.current?.(), 6000))
+  }, [remaining, busy])
 
   const retry = async () => {
     setBusy(true); setError('')
@@ -165,15 +194,24 @@ export default function PracticeSessionPage() {
     {error && <Alert type="error" showIcon title={error} className="page-alert" closable onClose={() => setError('')} />}
     {session && <>
       <div className="attempt-head page-card">
-        <h2 className="attempt-head__title">Luyện tập: {session.subjectName || 'Môn học'}</h2>
+        <h2 className="attempt-head__title">{KIND_LABELS[session.kind] || 'Luyện tập'}: {session.subjectName || 'Môn học'}</h2>
         <div className="attempt-head__meta">
-          Chế độ hiện đáp án: {MODE_LABELS[session.revealMode] || session.revealMode}  |  {session.questionCount} câu
+          {session.kind === 'mock'
+            ? <>Thời lượng: {session.durationMinutes} phút  |  {session.questionCount} câu  |  Không tính điểm lớp</>
+            : <>Chế độ hiện đáp án: {MODE_LABELS[session.revealMode] || session.revealMode}  |  {session.questionCount} câu</>}
         </div>
+        {remaining != null && <div className={`attempt-clock ${remaining <= 300 ? 'attempt-clock--warn' : ''}`}>
+          <div>
+            <div className="attempt-clock__label"><ClockCircleOutlined /> Thời gian còn lại (đồng bộ theo máy chủ)</div>
+            <div className="attempt-clock__sub">Hết giờ bài tự nộp theo đáp án đã lưu.</div>
+          </div>
+          <div className="attempt-clock__value" aria-label="Thời gian còn lại">{formatClock(remaining)}</div>
+        </div>}
         <div className="attempt-head__stats">
           {finished
             ? <span>Kết quả: <strong className="practice-score">{session.correctCount}/{session.questionCount}</strong> câu đúng</span>
             : <span>Bản nháp #{session.revision}{dirty ? ' · chưa lưu' : ' · đã lưu'}</span>}
-          <StatusTag tone={finished ? 'success' : 'info'}>{finished ? 'Đã nộp' : 'Đang làm'}</StatusTag>
+          <StatusTag tone={finished ? 'success' : timeUp ? 'warning' : 'info'}>{finished ? 'Đã nộp' : timeUp ? 'Hết giờ' : 'Đang làm'}</StatusTag>
         </div>
       </div>
 
@@ -224,10 +262,10 @@ export default function PracticeSessionPage() {
                 <Explanation text={result.explanation} />
               </>
               : question.questionTypeId === 3
-                ? <Checkbox.Group disabled={busy} value={choices[question.id] || []} className="attempt-options"
+                ? <Checkbox.Group disabled={busy || timeUp} value={choices[question.id] || []} className="attempt-options"
                   onChange={(values) => choose(question, values)}
                   options={question.options.map((option, i) => ({ label: `${LETTERS[i] || i + 1}. ${option.content}`, value: option.id }))} />
-                : <Radio.Group disabled={busy} value={choices[question.id]?.[0]} className="attempt-options"
+                : <Radio.Group disabled={busy || timeUp} value={choices[question.id]?.[0]} className="attempt-options"
                   onChange={(event) => choose(question, [event.target.value])}>
                   <Space orientation="vertical">{question.options.map((option, i) =>
                     <Radio key={option.id} value={option.id}>{LETTERS[i] || i + 1}. {option.content}</Radio>)}</Space>
@@ -260,7 +298,7 @@ export default function PracticeSessionPage() {
             <Button size="large" type="primary" icon={<SendOutlined />} onClick={() => setConfirmOpen(true)} loading={busy}>Nộp bài</Button>
           </Space>
         </div>}
-      <Modal title="Nộp bài luyện tập" open={confirmOpen} okText="Nộp bài" cancelText="Làm tiếp"
+      <Modal title={session.kind === 'mock' ? 'Nộp bài thi thử' : 'Nộp bài luyện tập'} open={confirmOpen} okText="Nộp bài" cancelText="Làm tiếp"
         onOk={finish} onCancel={() => setConfirmOpen(false)} okButtonProps={{ loading: busy }}>
         <p>Bạn đã trả lời <strong>{answered}/{allItems.length}</strong> câu.
           {allItems.length - answered > 0 && <> Còn <strong>{allItems.length - answered}</strong> câu chưa trả lời.</>}</p>
