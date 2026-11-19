@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Alert, Button, Card, Checkbox, Modal, Radio, Space, Tag, Typography } from 'antd'
+import { Alert, Button, Card, Checkbox, Modal, Radio, Space, Switch, Tag, Typography } from 'antd'
 import {
   ArrowLeftOutlined, CheckCircleFilled, ClockCircleOutlined, EyeOutlined, FlagFilled, FlagOutlined, InfoCircleOutlined,
   LeftOutlined, LockOutlined, ReloadOutlined, RightOutlined, SaveOutlined, SendOutlined,
@@ -12,6 +12,8 @@ import { getAttempt, getAttemptReview, getVisibilityCount, recordVisibilityHidde
   saveAttempt, submitAttempt } from '../../services/attemptService'
 import { getMySchedules } from '../../services/scheduleService'
 import { formatClock, formatVnMoment, formatVnSeconds } from '../../utils/duration'
+import useReviewFlags from '../../hooks/useReviewFlags'
+import { visibleQuestions } from '../../services/reviewFlags'
 
 const toDraft = (answers = []) => Object.fromEntries(answers.map((x) => [x.questionId, x.selectedAnswerIds]))
 const payload = (questions, choices) => questions.map((q) => ({ questionId: q.id, selectedAnswerIds: choices[q.id] || [] }))
@@ -19,20 +21,6 @@ const LETTERS = 'ABCDEFGHIJ'
 const AUTOSAVE_MS = 15000
 const finishedTitle = { voided: 'Đã hủy', timedOut: 'Đã hết thời gian làm bài', submitted: 'Đã nộp bài' }
 
-/** Đánh dấu câu chỉ lưu ở trình duyệt (sessionStorage), không gửi lên máy chủ. */
-function useFlags(id) {
-  const key = `attempt-flags:${id}`
-  const [flags, setFlags] = useState(() => {
-    try { return new Set(JSON.parse(sessionStorage.getItem(key) || '[]')) } catch { return new Set() }
-  })
-  const toggle = (questionId) => setFlags((old) => {
-    const next = new Set(old)
-    if (next.has(questionId)) next.delete(questionId); else next.add(questionId)
-    sessionStorage.setItem(key, JSON.stringify([...next]))
-    return next
-  })
-  return [flags, toggle]
-}
 
 export default function StudentAttemptPage() {
   const { id } = useParams()
@@ -54,7 +42,9 @@ export default function StudentAttemptPage() {
   const [lastSavedAt, setLastSavedAt] = useState(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
-  const [flags, toggleFlag] = useFlags(id)
+  // To-be T8: đánh dấu câu lưu ở server (giữ qua tải lại/thiết bị, cả lúc xem lại); đánh dấu cũ trong sessionStorage được đẩy lên một lần
+  const [flags, toggleFlag] = useReviewFlags('exam', id, { legacyKey: `attempt-flags:${id}`, onError: setError })
+  const [onlyFlagged, setOnlyFlagged] = useState(false)
   const saveRef = useRef(null)
 
   const load = useCallback(async () => {
@@ -141,7 +131,6 @@ export default function StudentAttemptPage() {
       const updated = await submitAttempt(id, latest.revision)
       setAttempt(updated); setDirty(false)
       setReview(null)
-      sessionStorage.removeItem(`attempt-flags:${id}`)
       setServerClock({ now: Date.parse(updated.serverNow), at: performance.now() })
     } catch (failure) { setError(`${getApiError(failure)}. Tải lại để xác nhận trạng thái trên máy chủ.`) }
     finally { setBusy(false) }
@@ -168,9 +157,12 @@ export default function StudentAttemptPage() {
   }, [wantsReview, attempt?.result, id])
 
   const questions = attempt?.questions || []
-  const reviewQuestions = review?.questions || []
+  // To-be T8: xem lại có thể chỉ hiện câu đã đánh dấu; số câu giữ theo thứ tự gốc
+  const reviewAll = review?.questions || []
+  const reviewQuestions = visibleQuestions(reviewAll, flags, onlyFlagged)
   const reviewCurrent = Math.min(reviewIndex, Math.max(0, reviewQuestions.length - 1))
-  const reviewQuestion = reviewQuestions[reviewCurrent]
+  const reviewItem = reviewQuestions[reviewCurrent]
+  const reviewQuestion = reviewItem?.question
   const question = questions[Math.min(current, Math.max(0, questions.length - 1))]
   const answeredCount = questions.filter((q) => (choices[q.id] || []).length > 0).length
   const locked = busy || remaining === 0
@@ -297,23 +289,31 @@ export default function StudentAttemptPage() {
         </div>}
         {attempt.result && !review && <div className="my-4"><Button icon={<EyeOutlined />} onClick={loadReview} loading={busy}>Xem lại bài</Button>
           <Typography.Text className="ml-2">Đáp án chỉ được mở sau khi lịch thi kết thúc.</Typography.Text></div>}
-        {reviewQuestion && <div className="attempt-layout">
+        {reviewAll.length > 0 && <div className="attempt-layout">
           <aside className="attempt-palette page-card">
-            <h3 className="attempt-palette__title">Danh sách câu hỏi <small>({reviewQuestions.length} câu)</small></h3>
+            <h3 className="attempt-palette__title">Danh sách câu hỏi <small>({reviewAll.length} câu)</small></h3>
             <div className="attempt-palette__legend">
               <span><i className="dot dot--answered" />Đã trả lời</span>
               <span><i className="dot" />Chưa trả lời</span>
               <span><i className="dot dot--current" />Đang xem</span>
+              <span><FlagFilled className="legend-flag" />Đánh dấu</span>
             </div>
-            <div className="attempt-palette__grid">{reviewQuestions.map((item, index) => {
+            <label className="review-flag-filter">
+              <Switch size="small" checked={onlyFlagged} aria-label="Chỉ câu đã đánh dấu"
+                onChange={(value) => { setOnlyFlagged(value); setReviewIndex(0) }} /> Chỉ câu đã đánh dấu ({flags.size})
+            </label>
+            <div className="attempt-palette__grid">{reviewQuestions.map(({ question: item, number }, index) => {
               const answered = reviewQuestionState(item) === 'answered'
-              const classes = ['palette-item', answered && 'is-answered', index === reviewCurrent && 'is-current']
+              const classes = ['palette-item', answered && 'is-answered', index === reviewCurrent && 'is-current', flags.has(item.id) && 'is-flagged']
               return <button type="button" key={item.id} className={classes.filter(Boolean).join(' ')}
-                aria-label={`Câu ${index + 1}${answered ? ', đã trả lời' : ''}`} onClick={() => setReviewIndex(index)}>{index + 1}</button>
+                aria-label={`Câu ${number}${answered ? ', đã trả lời' : ''}`} onClick={() => setReviewIndex(index)}>{number}</button>
             })}</div>
+            {onlyFlagged && reviewQuestions.length === 0 && <Typography.Text type="secondary">Chưa đánh dấu câu nào.</Typography.Text>}
           </aside>
-          <Card className="attempt-question review-question"
-            title={<span>Câu <strong className="attempt-question__no">{reviewCurrent + 1}/{reviewQuestions.length}</strong></span>}>
+          {reviewQuestion && <Card className="attempt-question review-question"
+            title={<span>Câu <strong className="attempt-question__no">{reviewItem.number}/{reviewAll.length}</strong></span>}
+            extra={<Button type="text" icon={flags.has(reviewQuestion.id) ? <FlagFilled className="legend-flag" /> : <FlagOutlined />}
+              onClick={() => toggleFlag(reviewQuestion.id)}>{flags.has(reviewQuestion.id) ? 'Bỏ đánh dấu' : 'Đánh dấu'}</Button>}>
             <Typography.Paragraph className="attempt-question__content">{reviewQuestion.content}</Typography.Paragraph>
             {reviewQuestion.options.map((option, i) => {
               const picked = reviewQuestion.selectedAnswerIds.includes(option.id)
@@ -337,7 +337,7 @@ export default function StudentAttemptPage() {
                   onClick={() => setReviewIndex(reviewCurrent + 1)}>Câu tiếp theo <RightOutlined /></Button>
               </Space>
             </div>
-          </Card>
+          </Card>}
         </div>}
         <div className="attempt-links"><Link to="/student/attempts">Xem lịch sử lượt thi →</Link></div>
       </>}
@@ -346,7 +346,7 @@ export default function StudentAttemptPage() {
       <ul className="attempt-guide">
         <li>Chọn số câu ở bảng bên trái để chuyển nhanh giữa các câu.</li>
         <li>Bài làm được tự lưu sau 15 giây kể từ lần chọn cuối; bạn cũng có thể bấm “Lưu đáp án”.</li>
-        <li>“Đánh dấu” chỉ giúp bạn nhớ câu cần xem lại, không ảnh hưởng điểm.</li>
+        <li>“Đánh dấu” giúp bạn nhớ câu cần xem lại (lưu trên máy chủ, còn sau khi nộp), không ảnh hưởng điểm.</li>
         <li>Đồng hồ chạy theo máy chủ. Hết giờ hệ thống sẽ tự chốt bản nháp đã lưu.</li>
         <li>Mỗi lần rời khỏi tab làm bài đều được ghi nhận.</li>
       </ul>

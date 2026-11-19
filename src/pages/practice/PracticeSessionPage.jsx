@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Alert, Button, Card, Checkbox, Modal, Radio, Space, Tag, Typography } from 'antd'
-import { ArrowLeftOutlined, CheckCircleFilled, CheckOutlined, ClockCircleOutlined, LeftOutlined, RedoOutlined,
+import { Alert, Button, Card, Checkbox, Modal, Radio, Space, Switch, Tag, Typography } from 'antd'
+import { ArrowLeftOutlined, CheckCircleFilled, CheckOutlined, ClockCircleOutlined, FlagFilled, FlagOutlined, LeftOutlined, RedoOutlined,
   ReloadOutlined, RightOutlined, SaveOutlined, SendOutlined } from '@ant-design/icons'
 import StatusTag from '../../components/ui/StatusTag'
 import { checkPracticeQuestion, finishPractice, getPractice, getPracticeReview, retryPractice, savePractice } from '../../services/practiceService'
 import { MODE_LABELS, paletteState, practiceErrorMessage, toCheckedMap, toDraft, toPayload } from '../../services/practiceView'
+import useReviewFlags from '../../hooks/useReviewFlags'
+import { visibleQuestions } from '../../services/reviewFlags'
 
 const LETTERS = 'ABCDEFGHIJ'
 const AUTOSAVE_MS = 15000
@@ -42,6 +44,9 @@ export default function PracticeSessionPage() {
   const [error, setError] = useState('')
   const [current, setCurrent] = useState(0)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  // To-be T8: đánh dấu câu lưu ở server (khi làm bài và khi xem lại); xem lại có thể chỉ hiện câu đã đánh dấu
+  const [flags, toggleFlag] = useReviewFlags('practice', id, { onError: setError })
+  const [onlyFlagged, setOnlyFlagged] = useState(false)
   const saveRef = useRef(null)
 
   const load = useCallback(async () => {
@@ -53,7 +58,7 @@ export default function PracticeSessionPage() {
     } catch (failure) { setError(practiceErrorMessage(failure)) }
   }, [id])
   // Đổi phiên (vd. sau "Làm lại bộ này"): xóa trạng thái phiên cũ trước khi tải
-  useEffect(() => { setCurrent(0); setSession(null); setReview(null); setChoices({}); setDirty(false); load() }, [load])
+  useEffect(() => { setCurrent(0); setSession(null); setReview(null); setChoices({}); setDirty(false); setOnlyFlagged(false); load() }, [load])
   // Rời trang/tải lại khi còn thay đổi chưa lưu: trình duyệt hỏi xác nhận
   useEffect(() => {
     if (!dirty) return undefined
@@ -140,11 +145,14 @@ export default function PracticeSessionPage() {
   const choose = (question, values) => { setChoices((old) => ({ ...old, [question.id]: values })); setDirty(true) }
 
   const finished = session?.state === 'finished'
-  const items = finished ? review?.questions || [] : session?.questions || []
+  const allItems = finished ? review?.questions || [] : session?.questions || []
+  // Danh sách hiển thị (kèm số gốc); lọc "Chỉ câu đã đánh dấu" chỉ áp khi xem lại
+  const items = visibleQuestions(allItems, flags, finished && onlyFlagged)
   const index = Math.min(current, Math.max(0, items.length - 1))
   const checkedMap = toCheckedMap(session?.checked)
   const reviewMap = Object.fromEntries((review?.questions || []).map((x) => [x.id, { isCorrect: x.isCorrect }]))
-  const question = items[index]
+  const number = items[index]?.number
+  const question = items[index]?.question
   const answered = (session?.questions || []).filter((q) => (choices[q.id] || []).length > 0).length
   const perQuestion = session?.revealMode === 'perQuestion'
   const result = question && !finished ? checkedMap[question.id] : null
@@ -169,28 +177,36 @@ export default function PracticeSessionPage() {
         </div>
       </div>
 
-      {question && <div className="attempt-layout">
+      {allItems.length > 0 && <div className="attempt-layout">
         <aside className="attempt-palette page-card">
-          <h3 className="attempt-palette__title">Danh sách câu hỏi <small>({items.length} câu)</small></h3>
+          <h3 className="attempt-palette__title">Danh sách câu hỏi <small>({allItems.length} câu)</small></h3>
           <div className="attempt-palette__legend">
             {(perQuestion || finished) && <><span><i className="dot dot--right" />Đúng</span><span><i className="dot dot--wrong" />Sai</span></>}
             {!finished && <span><i className="dot dot--pending" />Đã trả lời</span>}
             <span><i className="dot" />Chưa trả lời</span>
+            <span><FlagFilled className="legend-flag" />Đánh dấu</span>
           </div>
-          <div className="attempt-palette__grid">{items.map((item, i) => {
+          {finished && <label className="review-flag-filter">
+            <Switch size="small" checked={onlyFlagged} aria-label="Chỉ câu đã đánh dấu"
+              onChange={(value) => { setOnlyFlagged(value); setCurrent(0) }} /> Chỉ câu đã đánh dấu ({flags.size})
+          </label>}
+          <div className="attempt-palette__grid">{items.map(({ question: item, number: no }, i) => {
             const state = finished
               ? (reviewMap[item.id]?.isCorrect ? 'right' : item.selectedAnswerIds?.length ? 'wrong' : 'empty')
               : paletteState(item.id, choices, checkedMap)
             const classes = ['palette-item', state === 'answered' && 'is-pending', state === 'right' && 'is-right',
-              state === 'wrong' && 'is-wrong', i === index && 'is-current']
+              state === 'wrong' && 'is-wrong', i === index && 'is-current', flags.has(item.id) && 'is-flagged']
             return <button type="button" key={item.id} className={classes.filter(Boolean).join(' ')}
-              aria-label={`Câu ${i + 1}`} onClick={() => go(i)}>{i + 1}</button>
+              aria-label={`Câu ${no}`} onClick={() => go(i)}>{no}</button>
           })}</div>
-          {!finished && <div className="attempt-palette__summary">Đã trả lời {answered}/{items.length} câu</div>}
+          {finished && onlyFlagged && items.length === 0 && <Typography.Text type="secondary">Chưa đánh dấu câu nào.</Typography.Text>}
+          {!finished && <div className="attempt-palette__summary">Đã trả lời {answered}/{allItems.length} câu</div>}
         </aside>
 
-        <Card className={`attempt-question ${finished || result ? 'review-question' : ''}`}
-          title={<span>Câu <strong className="attempt-question__no">{index + 1}/{items.length}</strong>
+        {question && <Card className={`attempt-question ${finished || result ? 'review-question' : ''}`}
+          extra={<Button type="text" icon={flags.has(question.id) ? <FlagFilled className="legend-flag" /> : <FlagOutlined />}
+            onClick={() => toggleFlag(question.id)}>{flags.has(question.id) ? 'Bỏ đánh dấu' : 'Đánh dấu'}</Button>}
+          title={<span>Câu <strong className="attempt-question__no">{number}/{allItems.length}</strong>
             {question.questionTypeId === 3 && <Tag className="ml-2" color="blue">Chọn nhiều đáp án</Tag>}
             {(result || finished) && <Tag className="ml-2" color={(result || reviewMap[question.id])?.isCorrect ? 'green' : 'red'}>
               {(result || reviewMap[question.id])?.isCorrect ? 'Đúng' : 'Sai'}</Tag>}</span>}>
@@ -226,7 +242,7 @@ export default function PracticeSessionPage() {
               <Button disabled={index >= items.length - 1} onClick={() => go(index + 1)}>Câu sau <RightOutlined /></Button>
             </Space>
           </div>
-        </Card>
+        </Card>}
       </div>}
 
       {finished
@@ -246,8 +262,8 @@ export default function PracticeSessionPage() {
         </div>}
       <Modal title="Nộp bài luyện tập" open={confirmOpen} okText="Nộp bài" cancelText="Làm tiếp"
         onOk={finish} onCancel={() => setConfirmOpen(false)} okButtonProps={{ loading: busy }}>
-        <p>Bạn đã trả lời <strong>{answered}/{items.length}</strong> câu.
-          {items.length - answered > 0 && <> Còn <strong>{items.length - answered}</strong> câu chưa trả lời.</>}</p>
+        <p>Bạn đã trả lời <strong>{answered}/{allItems.length}</strong> câu.
+          {allItems.length - answered > 0 && <> Còn <strong>{allItems.length - answered}</strong> câu chưa trả lời.</>}</p>
         <p>Sau khi nộp sẽ xem được đáp án và lời giải của tất cả các câu.</p>
       </Modal>
     </>}
