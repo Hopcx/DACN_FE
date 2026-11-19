@@ -2,7 +2,11 @@
 import { getApiError } from '../api/response.js'
 
 export const MODE_LABELS = { end: 'Cuối phiên', perQuestion: 'Từng câu' }
-export const STATE_LABELS = { inProgress: 'Đang làm', finished: 'Đã nộp' }
+export const STATE_LABELS = { inProgress: 'Đang làm', finished: 'Đã nộp', expired: 'Hết giờ' }
+// To-be T9: loại phiên và thời lượng Thi thử (khớp BE PracticeSnapshotFactory/PracticeTiming)
+export const KIND_LABELS = { practice: 'Luyện tập', mock: 'Thi thử' }
+export const MIN_DURATION = 5
+export const MAX_DURATION = 180
 export const DEFAULT_COUNT = 10
 export const MAX_COUNT = 50
 
@@ -19,6 +23,8 @@ const MESSAGES = {
   PRACTICE_CLOSED: 'Phiên đã nộp bài.',
   PRACTICE_CHECK_NOT_ALLOWED: 'Phiên này chỉ hiện đáp án sau khi nộp bài.',
   INVALID_SELECTION: 'Lựa chọn không hợp lệ cho câu hỏi.',
+  MOCK_ALREADY_OPEN: 'Bạn đang có một bài thi thử chưa nộp. Hãy làm tiếp hoặc bỏ bài đó trong lịch sử.',
+  PRACTICE_EXPIRED: 'Đã hết giờ làm bài. Bài được chấm theo đáp án đã lưu.',
 }
 
 /** Thông báo tiếng Việt theo mã lỗi của API Luyện tập; mã khác → getApiError. */
@@ -44,8 +50,24 @@ export function buildCreateBody(values) {
     questionLevelIds: ids(values.questionLevelIds),
     tagIds: ids(values.tagIds),
     questionCount: Number(values.questionCount),
-    revealMode: values.revealMode === 'perQuestion' ? 'perQuestion' : 'end',
+    // Thi thử luôn hiện đáp án sau khi nộp và cần thời lượng
+    revealMode: values.kind !== 'mock' && values.revealMode === 'perQuestion' ? 'perQuestion' : 'end',
+    kind: values.kind === 'mock' ? 'mock' : 'practice',
+    ...(values.kind === 'mock' ? { durationMinutes: Number(values.durationMinutes) } : {}),
   }
+}
+
+/** Thời lượng gợi ý: 1,5 phút/câu, làm tròn lên bội 5, trong khoảng 5–180 (khớp BE PracticeTiming.SuggestedMinutes). */
+export function suggestedMinutes(questionCount) {
+  const minutes = Math.ceil((Number(questionCount) || 0) * 1.5 / 5) * 5
+  return Math.min(MAX_DURATION, Math.max(MIN_DURATION, minutes))
+}
+
+/** Số giây còn lại theo đồng hồ máy chủ: hạn nộp − giờ máy chủ lúc tải − thời gian đã trôi kể từ lúc tải. */
+export function remainingSeconds(deadlineUtc, serverNow, elapsedMs) {
+  const deadline = Date.parse(deadlineUtc); const now = Date.parse(serverNow)
+  if (Number.isNaN(deadline) || Number.isNaN(now)) return null
+  return Math.max(0, Math.ceil((deadline - now - (elapsedMs || 0)) / 1000))
 }
 
 /**

@@ -2,7 +2,7 @@
 // phiên "Từng câu" → kiểm tra từng câu (Đúng/Sai + lời giải, khóa lựa chọn) → tải lại vẫn thấy → nộp; lịch sử → Làm lại bộ này.
 // Runner: DACN_Project/tests/TaskToBeT7PracticeFrontendSmoke.ps1 (tạo fixture theo tag, dọn trong finally).
 // Biến môi trường: DACN_QA_EMAIL, DACN_QA_PASSWORD, DACN_QA_TAG, DACN_QA_SUBJECT_NAME, DACN_QA_DATABASE, tùy chọn DACN_FE_ORIGIN, DACN_CHROME_PATH.
-import { spawn } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -14,6 +14,12 @@ const tag = env('DACN_QA_TAG')
 const subjectName = env('DACN_QA_SUBJECT_NAME')
 if (env('DACN_QA_DATABASE') !== 'ProjectDACN_Task04Task09_Test') throw new Error('Only the named clone is writable')
 const origin = process.env.DACN_FE_ORIGIN || 'https://localhost:5173'
+const database = 'ProjectDACN_Task04Task09_Test'
+// Chỉ dùng để dời hạn nộp Thi thử trên bản sao (mọi thao tác nghiệp vụ đi qua giao diện)
+function sql(query) {
+  return execFileSync('sqlcmd', ['-S', '.', '-d', database, '-E', '-No', '-C', '-b', '-I', '-W', '-h', '-1',
+    '-Q', `SET NOCOUNT ON; IF DB_NAME() <> N'${database}' THROW 51301, 'Wrong database', 1; ${query}`], { encoding: 'utf8' }).trim()
+}
 
 const profile = await mkdtemp(path.join(tmpdir(), 'dacn-t7-practice-'))
 const port = 9300 + Math.floor(Math.random() * 1000)
@@ -223,6 +229,29 @@ try {
   await eventually(async () => { const now = await page.sessionPath(); return /^\/student\/practice\/[0-9a-f-]{36}$/.test(now) && now !== endPath && now !== pqPath }, 'retry session')
   await page.waitText('Đang làm'); await page.noErrorAlert('retry')
   pass('lịch sử có 2 phiên đã nộp; "Làm lại bộ này" mở phiên mới')
+
+  // ---- To-be T9: Thi thử 1 câu — đồng hồ, lưu đáp án, hết giờ tự nộp (dời hạn nộp bằng SQL trên bản sao)
+  await page.go('/student/practice')
+  await page.waitText('Tạo phiên luyện tập')
+  await page.select('Môn luyện tập', subjectName)
+  await page.choose('Thi thử (có giới hạn giờ)')
+  await eventually(() => page.eval(`!!document.querySelector('input[aria-label="Thời lượng thi thử"]')`), 'duration field')
+  await page.fill('input[aria-label="Số câu"]', 1)
+  await eventually(() => page.eval(`document.querySelector('input[aria-label="Thời lượng thi thử"]').value === '5'`), 'suggested 5 minutes')
+  await page.click('Bắt đầu thi thử')
+  await eventually(async () => /^\/student\/practice\/[0-9a-f-]{36}$/.test(await page.sessionPath()), 'start mock')
+  const mockPath = await page.sessionPath()
+  await page.waitText(`Thi thử: ${subjectName}`); await page.waitText('Thời gian còn lại')
+  if ((await page.body()).includes('Kiểm tra câu này')) throw new Error('Thi thử không được có nút Kiểm tra câu này.')
+  const clock = await page.eval(`document.querySelector('[aria-label="Thời gian còn lại"]').innerText.trim()`)
+  if (!/^0?[45]:\d\d$|^00:0?[45]:\d\d$/.test(clock)) throw new Error(`Đồng hồ thi thử lạ: ${clock}`)
+  await page.choose('A. OK'); await page.click('Lưu')
+  await page.waitText('Đã lưu bản nháp')
+  sql(`UPDATE dbo.PracticeSessions SET DeadlineUtc=DATEADD(second,3,SYSUTCDATETIME()) WHERE Id='${mockPath.split('/').pop()}';`)
+  await page.go(mockPath, true)
+  await eventually(() => page.eval(`document.querySelector('.practice-score')?.innerText.trim() === '1/1'`), 'mock auto-submitted', 150)
+  await page.waitText('Đáp án đúng')
+  pass('T9: Thi thử có đồng hồ, hết giờ tự nộp theo đáp án đã lưu, xem lại kết quả 1/1')
   console.log(`T7_PRACTICE_BROWSER_SMOKE=PASS;STEPS=${results.length};TAG=${tag}`)
 } catch (error) {
   console.error(`T7_PRACTICE_BROWSER_SMOKE=FAIL: ${error.message}`)
