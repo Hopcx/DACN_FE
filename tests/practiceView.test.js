@@ -15,7 +15,7 @@ test('practiceErrorMessage maps practice codes and not-enough details', () => {
 
 test('buildCreateBody normalizes ids, count and mode', () => {
   assert.deepEqual(buildCreateBody({ subjectId: '3', chapterIds: [2, '2', 0, 5], tagIds: undefined, questionCount: '7', revealMode: 'x' }),
-    { subjectId: 3, chapterIds: [2, 5], questionLevelIds: [], tagIds: [], questionCount: 7, revealMode: 'end' })
+    { subjectId: 3, chapterIds: [2, 5], questionLevelIds: [], tagIds: [], questionCount: 7, revealMode: 'end', kind: 'practice' })
   assert.equal(buildCreateBody({ subjectId: 1, questionCount: 1, revealMode: 'perQuestion' }).revealMode, 'perQuestion')
 })
 
@@ -46,4 +46,16 @@ test('asUtc adds Z only when the timestamp has no offset', async () => {
   assert.equal(asUtc('2026-11-18T07:05:00Z'), '2026-11-18T07:05:00Z')
   assert.equal(asUtc('2026-11-18T14:05:00+07:00'), '2026-11-18T14:05:00+07:00')
   assert.equal(asUtc(null), null)
+})
+
+test('mock exam helpers: create body, suggested duration, remaining seconds', async () => {
+  const { buildCreateBody, remainingSeconds, suggestedMinutes } = await import('../src/services/practiceView.js')
+  const mock = buildCreateBody({ subjectId: 1, questionCount: 10, kind: 'mock', durationMinutes: '15', revealMode: 'perQuestion' })
+  assert.equal(mock.kind, 'mock'); assert.equal(mock.durationMinutes, 15); assert.equal(mock.revealMode, 'end')
+  const practice = buildCreateBody({ subjectId: 1, questionCount: 10, revealMode: 'perQuestion', durationMinutes: 15 })
+  assert.equal(practice.kind, 'practice'); assert.equal('durationMinutes' in practice, false); assert.equal(practice.revealMode, 'perQuestion')
+  assert.deepEqual([1, 7, 10, 50, 200].map(suggestedMinutes), [5, 15, 15, 75, 180])
+  assert.equal(remainingSeconds('2026-11-19T01:10:00Z', '2026-11-19T01:00:00Z', 1500), 599)
+  assert.equal(remainingSeconds('2026-11-19T01:00:00Z', '2026-11-19T01:00:10Z', 0), 0)
+  assert.equal(remainingSeconds(null, '2026-11-19T01:00:00Z', 0), null)
 })
