@@ -10,6 +10,7 @@ import { abandonPractice, createPractice, getMyPractice, getPracticeOptions, ret
 import { asUtc, buildCreateBody, DEFAULT_COUNT, KIND_LABELS, MAX_DURATION, maxSelectable, MIN_DURATION, MODE_LABELS,
   practiceErrorMessage, resultLabel, STATE_LABELS, suggestedMinutes } from '../../services/practiceView'
 import { formatScheduleTime } from '../../services/scheduleTime'
+import { formatDuration } from '../../services/attemptReview'
 
 const withCount = (items) => (items || []).map((x) => ({ value: x.id, label: `${x.name} (${x.questionCount} câu)` }))
 
@@ -165,7 +166,7 @@ export default function PracticePage() {
           <Button icon={<ReloadOutlined />} onClick={loadHistory} loading={loading}>Làm mới</Button>
         </div>
       </div>
-      <Table rowKey="id" size="middle" loading={loading} dataSource={history?.items || []} scroll={{ x: 900 }}
+      <Table rowKey="id" size="middle" loading={loading} dataSource={history?.items || []} scroll={{ x: 1100 }}
         locale={{ emptyText: 'Chưa có phiên luyện tập nào' }}
         pagination={{ current: page, pageSize: 10, total: history?.totalCount || 0, showSizeChanger: false, onChange: setPage,
           showTotal: (total) => `${total} phiên` }}
@@ -178,12 +179,16 @@ export default function PracticePage() {
           { title: 'Kết quả', key: 'result', width: 100, align: 'center', render: (_, row) => resultLabel(row) },
           { title: 'Tạo lúc', dataIndex: 'createdAtUtc', width: 160, render: (value) => formatScheduleTime(asUtc(value), 'utc') },
           { title: 'Nộp lúc', dataIndex: 'finishedAtUtc', width: 160, render: (value) => (value ? formatScheduleTime(asUtc(value), 'utc') : '—') },
+          { title: 'Thời gian làm bài', dataIndex: 'durationSeconds', width: 130, render: (value) => formatDuration(value) },
           { title: 'Thao tác', key: 'actions', width: 260, render: (_, row) => row.state === 'inProgress'
             ? <Space wrap>
               <Button size="small" type="primary" icon={<PlayCircleOutlined />} onClick={() => navigate(`/student/practice/${row.id}`)}>Làm tiếp</Button>
-              <Popconfirm title="Bỏ phiên này? Bài làm dở sẽ bị xóa." okText="Bỏ phiên" cancelText="Không" onConfirm={() => act('abandon', row)}>
-                <Button size="small" danger icon={<DeleteOutlined />} disabled={busy}>Bỏ phiên</Button>
-              </Popconfirm>
+              {/* Đã kiểm tra đáp án ít nhất một câu thì không bỏ được (BE trả PRACTICE_HAS_CHECKED) — chỉ còn nộp */}
+              {row.checkedCount > 0
+                ? <Typography.Text type="secondary" className="practice-note">Đã kiểm tra {row.checkedCount} câu, hãy nộp bài</Typography.Text>
+                : <Popconfirm title="Bỏ phiên này? Bài làm dở sẽ bị xóa." okText="Bỏ phiên" cancelText="Không" onConfirm={() => act('abandon', row)}>
+                  <Button size="small" danger icon={<DeleteOutlined />} disabled={busy}>Bỏ phiên</Button>
+                </Popconfirm>}
             </Space>
             : <Space wrap>
               <Button size="small" icon={<EyeOutlined />} onClick={() => navigate(`/student/practice/${row.id}`)}>Xem lại</Button>
