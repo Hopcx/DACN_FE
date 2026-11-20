@@ -206,6 +206,15 @@ try {
   pass('T8: đánh dấu câu lưu ở server, còn sau khi tải lại')
   await page.waitText(`EXPL-${tag} ${first.split(' ').pop()}`, 'lời giải còn sau khi tải lại')
   pass('tải lại trang vẫn thấy kết quả câu đã kiểm tra')
+  // Nợ sau T9: lịch sử không cho "Bỏ phiên" với phiên đã kiểm tra câu
+  await page.go('/student/practice')
+  await page.waitText('Đã kiểm tra 1 câu, hãy nộp bài')
+  const abandonable = await page.eval(`[...document.querySelectorAll('.ant-table-row')].filter((r) => r.innerText.includes('Từng câu') && r.innerText.includes('Đang làm'))
+    .some((r) => [...r.querySelectorAll('button')].some((b) => b.innerText.trim() === 'Bỏ phiên'))`)
+  if (abandonable) throw new Error('Phiên đã kiểm tra câu vẫn có nút Bỏ phiên.')
+  await page.go(pqPath)
+  await page.waitText(`EXPL-${tag} ${first.split(' ').pop()}`, 'quay lại phiên Từng câu')
+  pass('lịch sử: phiên đã kiểm tra câu không có "Bỏ phiên"')
   await page.click('Câu sau')
   const second = await eventually(async () => { const text = await page.currentQuestion(); return text && text !== first ? text : '' }, 'question 2')
   if ((await page.body()).includes(`EXPL-${tag} ${second.split(' ').pop()}`)) throw new Error('Lộ lời giải câu chưa kiểm tra.')
@@ -224,7 +233,14 @@ try {
   // ---- Lịch sử + Làm lại bộ này
   await page.go('/student/practice')
   await eventually(() => page.eval(`[...document.querySelectorAll('.ant-table-row')].filter((r) => r.innerText.includes('Đã nộp')).length >= 2`), 'history rows')
-  await page.waitText('2/2'); await page.waitText('1/2')
+  await page.waitText('2/2'); await page.waitText('1/2'); await page.waitText('Thời gian làm bài')
+  // Nợ sau T9: phiên đã nộp có thời gian làm bài (dạng "x phút y giây" / "y giây"), không phải "—"
+  const durations = await page.eval(`(() => {
+    const column = [...document.querySelectorAll('.ant-table-thead th')].findIndex((th) => th.innerText.trim() === 'Thời gian làm bài')
+    if (column < 0) return []
+    return [...document.querySelectorAll('.ant-table-row')].filter((r) => r.innerText.includes('Đã nộp'))
+      .map((r) => r.querySelectorAll('td')[column]?.innerText.trim()) })()`)
+  if (!durations.length || durations.some((x) => !x || x === '—')) throw new Error(`Thời gian làm bài lạ: ${JSON.stringify(durations)}`)
   await page.click('Làm lại bộ này', '.ant-table-tbody')
   await eventually(async () => { const now = await page.sessionPath(); return /^\/student\/practice\/[0-9a-f-]{36}$/.test(now) && now !== endPath && now !== pqPath }, 'retry session')
   await page.waitText('Đang làm'); await page.noErrorAlert('retry')
