@@ -5,6 +5,7 @@ import { CheckOutlined, CloseOutlined, DeleteOutlined, ReloadOutlined, SearchOut
 import PageHeader from '../../components/ui/PageHeader'
 import PageCard from '../../components/ui/PageCard'
 import StatusTag from '../../components/ui/StatusTag'
+import ClassRankingTab from './ClassRankingTab'
 import { LoadError, TableEmpty } from '../../components/ui/PageState'
 import { formatScheduleTime } from '../../services/scheduleTime'
 import { getApiError, toLoadError } from '../../api/response'
@@ -178,6 +179,7 @@ export default function TeacherClassesPage() {
             { title: 'Kết quả', dataIndex: 'isPassed', render: (value) => value == null ? '—'
               : <StatusTag tone={value ? 'success' : 'danger'}>{value ? 'Đạt' : 'Chưa đạt'}</StatusTag> },
           ]} /> },
+        { key: 'ranking', label: 'Xếp hạng', children: <ClassRankingTab key={selected.id} classId={selected.id} /> },
       ]} />
     </PageCard>}
   </section>
