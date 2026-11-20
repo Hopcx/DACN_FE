@@ -120,6 +120,8 @@
 .practice-score { font-size: 18px; color: #0f766e; }
 /* To-be T8: công tắc "Chỉ câu đã đánh dấu" ở xem lại */
 .review-flag-filter { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; cursor: pointer; }
+/* Nợ sau T9: ghi chú thay nút "Bỏ phiên" ở lịch sử */
+.practice-note { font-size: 12px; }
 
 .history-toolbar { margin-bottom: 12px; }
 .history-exam, .history-state, .history-score { display: flex; flex-direction: column; gap: 2px; }
