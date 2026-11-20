@@ -28,3 +28,6 @@ export const removeTeacherClassMember = async (classId, memberId) => readPayload
 export const getTeacherClassSchedules = async (classId) => readPayload(await axiosClient.get(`/teacher/classes/${classId}/schedules`))
 export const getTeacherClassResults = async (classId) => readPayload(await axiosClient.get(`/teacher/classes/${classId}/results`))
 export const getTeacherOverview = async (params) => readPayload(await axiosClient.get('/teacher/overview', { params }))
+// To-be T10: xếp hạng lớp
+export const getTeacherClassRanking = async (classId) => readPayload(await axiosClient.get(`/teacher/classes/${classId}/ranking`))
+export const getMyClassRanking = async (classId) => readPayload(await axiosClient.get(`/student/classes/${classId}/ranking`))
