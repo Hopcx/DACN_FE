@@ -162,3 +162,7 @@ a:hover {
 .page-body > section > h3.ant-typography { margin-bottom: 12px; }
 .ant-btn-primary { box-shadow: none; }
 .ant-modal .ant-modal-content { border-radius: 14px; }
+/* To-be T10: xếp hạng lớp */
+.class-ranking .ranking-row--top > td { background: #f0fdf4; }
+.class-ranking .ranking-row--bottom > td { background: #fef2f2; }
+.my-ranking__rank { font-size: 16px; }
