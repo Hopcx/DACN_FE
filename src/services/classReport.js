@@ -32,3 +32,14 @@ export function hardEmptyText(data) {
     return `Chưa có câu nào đủ ${t.hardMinAnswers} lượt trả lời (nhiều nhất hiện có: ${data.maxAnswersPerQuestion ?? 0}).`
   return `Không có câu nào có tỉ lệ đúng dưới ${t.hardBelow}%.`
 }
+
+// To-be T13: tên file từ Content-Disposition (ưu tiên filename*=UTF-8''…); chỉ giữ ký tự an toàn
+export function fileNameFromDisposition(header, fallback = 'bao-cao-lop.xlsx') {
+  const text = String(header || '')
+  const star = /filename\*=UTF-8''([^;]+)/i.exec(text)
+  const plain = /filename="?([^";]+)"?/i.exec(text)
+  let name = ''
+  try { name = star ? decodeURIComponent(star[1]) : plain ? plain[1] : '' } catch { name = plain ? plain[1] : '' }
+  name = name.replace(/[\\/:*?"<>|]+/g, '-').trim()
+  return name && name.toLowerCase().endsWith('.xlsx') ? name : fallback
+}

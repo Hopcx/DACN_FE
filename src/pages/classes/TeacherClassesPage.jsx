@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Alert, Button, Form, Input, Popconfirm, Table, Tabs } from 'antd'
-import { CheckOutlined, CloseOutlined, DeleteOutlined, ReloadOutlined, SearchOutlined, TeamOutlined, UserAddOutlined } from '@ant-design/icons'
+import { CheckOutlined, CloseOutlined, DeleteOutlined, FileExcelOutlined, ReloadOutlined, SearchOutlined, TeamOutlined, UserAddOutlined } from '@ant-design/icons'
 import PageHeader from '../../components/ui/PageHeader'
 import PageCard from '../../components/ui/PageCard'
 import StatusTag from '../../components/ui/StatusTag'
@@ -12,7 +12,8 @@ import { formatScheduleTime } from '../../services/scheduleTime'
 import { getApiError, toLoadError } from '../../api/response'
 import { showTotalLabel, statusView } from '../../services/listView'
 import { addTeacherClassMember, approveTeacherClassMember, getTeacherClasses,
-  getTeacherClassMembers, getTeacherClassResults, getTeacherClassSchedules, lookupTeacherStudent, removeTeacherClassMember } from '../../services/classService'
+  getTeacherClassMembers, getTeacherClassResults, getTeacherClassSchedules, lookupTeacherStudent, removeTeacherClassMember, downloadClassReport } from '../../services/classService'
+import { rankingErrorMessage } from '../../services/classRanking'
 
 const stt = { title: 'STT', key: 'stt', width: 56, align: 'center', render: (_, __, index) => index + 1 }
 const attemptState = {
@@ -34,6 +35,8 @@ export default function TeacherClassesPage() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [exportMessage, setExportMessage] = useState('')
   const requestRef = useRef(0)
   const detailRequestRef = useRef(0)
 
@@ -56,7 +59,7 @@ export default function TeacherClassesPage() {
   async function choose(item) {
     // Bấm lớp khác nhanh: chỉ phản hồi của lần chọn cuối được ghi
     const requestId = ++detailRequestRef.current
-    setSelected(item); setMembers([]); setSchedules([]); setResults([]); setLookup(null); setDetailError(''); setDetailLoading(true)
+    setSelected(item); setMembers([]); setSchedules([]); setResults([]); setLookup(null); setDetailError(''); setExportMessage(''); setExporting(false); setDetailLoading(true)
     try {
       const [memberRows, scheduleRows, resultRows] = await Promise.all([
         getTeacherClassMembers(item.id), getTeacherClassSchedules(item.id), getTeacherClassResults(item.id)])
@@ -94,6 +97,21 @@ export default function TeacherClassesPage() {
     } finally { setBusy(false) }
   }
 
+  // To-be T13: xuất báo cáo lớp (4 sheet) — BE ghi audit; lỗi hiện tiếng Việt
+  async function exportReport() {
+    // Review T13: đổi lớp giữa chừng (choose() tăng detailRequestRef) thì không ghi kết quả/lỗi/loading của lớp cũ lên lớp mới
+    const item = selected
+    const requestId = detailRequestRef.current
+    setExporting(true); setDetailError(''); setExportMessage('')
+    try {
+      const fileName = await downloadClassReport(item.id, `bao-cao-lop-${item.classCode}.xlsx`)
+      if (requestId === detailRequestRef.current)
+        setExportMessage(`Đã xuất ${fileName}. File chứa thông tin cá nhân học viên — không chia sẻ ngoài phạm vi lớp.`)
+    } catch (failure) {
+      if (requestId === detailRequestRef.current) setDetailError(rankingErrorMessage(failure, getApiError(failure)))
+    } finally { if (requestId === detailRequestRef.current) setExporting(false) }
+  }
+
   if (!isTeacher) return <Alert type="error" showIcon title="Bạn không có quyền xem lớp của giảng viên." />
   const statusTag = (value) => { const view = statusView(value); return <StatusTag tone={view.tone}>{view.label}</StatusTag> }
   return <section className="page-body">
@@ -125,10 +143,12 @@ export default function TeacherClassesPage() {
       <div className="page-toolbar">
         <h2 className="page-section-title mb-0">Lớp {selected.name}</h2>
         <div className="page-toolbar__end">
+          <Button icon={<FileExcelOutlined />} onClick={exportReport} loading={exporting}>Xuất Excel</Button>
           <Button icon={<CloseOutlined />} onClick={() => setSelected(null)}>Đóng</Button>
         </div>
       </div>
       {detailError && <Alert type="error" showIcon title={detailError} className="page-alert" />}
+      {exportMessage && <Alert type="success" showIcon title={exportMessage} className="page-alert" closable onClose={() => setExportMessage('')} />}
       <Tabs items={[
         { key: 'members', label: `Thành viên (${members.length})`, children: <div>
           <Form form={form} layout="inline" onFinish={findStudent}>

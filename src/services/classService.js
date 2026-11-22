@@ -1,4 +1,6 @@
 import axiosClient from '../api/axiosClient'
+import { normalizeBlobError, saveBlob } from '../api/blob'
+import { fileNameFromDisposition } from './classReport'
 import { readPayload } from '../api/response'
 
 export const getClasses = async (textSearch) => readPayload(await axiosClient.get('/classes', {
@@ -33,3 +35,15 @@ export const getTeacherClassRanking = async (classId) => readPayload(await axios
 export const getMyClassRanking = async (classId) => readPayload(await axiosClient.get(`/student/classes/${classId}/ranking`))
 // To-be T12: báo cáo lớp (theo chương, câu hay sai)
 export const getTeacherClassAnalysis = async (classId) => readPayload(await axiosClient.get(`/teacher/classes/${classId}/analysis`))
+// To-be T13: xuất báo cáo lớp (.xlsx); tên file theo Content-Disposition của BE
+export async function downloadClassReport(classId, fallbackName) {
+  try {
+    const response = await axiosClient.get(`/teacher/classes/${classId}/report.xlsx`, { responseType: 'blob' })
+    const fileName = fileNameFromDisposition(response.headers?.['content-disposition'], fallbackName)
+    saveBlob(response.data, fileName)
+    return fileName
+  } catch (failure) {
+    await normalizeBlobError(failure)
+    throw failure
+  }
+}
