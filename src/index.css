@@ -168,3 +168,6 @@ a:hover {
 .my-ranking__rank { font-size: 16px; }
 /* To-be T11: phân tích học viên */
 .student-analysis__summary { font-size: 15px; }
+/* To-be T12: báo cáo lớp */
+.class-report__weak { margin: 0; padding-left: 18px; max-height: 260px; overflow: auto; }
+.class-report__content { white-space: normal; }

@@ -6,6 +6,7 @@ import PageHeader from '../../components/ui/PageHeader'
 import PageCard from '../../components/ui/PageCard'
 import StatusTag from '../../components/ui/StatusTag'
 import ClassRankingTab from './ClassRankingTab'
+import ClassReportTab from './ClassReportTab'
 import { LoadError, TableEmpty } from '../../components/ui/PageState'
 import { formatScheduleTime } from '../../services/scheduleTime'
 import { getApiError, toLoadError } from '../../api/response'
@@ -180,6 +181,7 @@ export default function TeacherClassesPage() {
               : <StatusTag tone={value ? 'success' : 'danger'}>{value ? 'Đạt' : 'Chưa đạt'}</StatusTag> },
           ]} /> },
         { key: 'ranking', label: 'Xếp hạng', children: <ClassRankingTab key={selected.id} classId={selected.id} /> },
+        { key: 'report', label: 'Phân tích lớp', children: <ClassReportTab key={selected.id} classId={selected.id} /> },
       ]} />
     </PageCard>}
   </section>
