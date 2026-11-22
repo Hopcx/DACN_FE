@@ -166,3 +166,5 @@ a:hover {
 .class-ranking .ranking-row--top > td { background: #f0fdf4; }
 .class-ranking .ranking-row--bottom > td { background: #fef2f2; }
 .my-ranking__rank { font-size: 16px; }
+/* To-be T11: phân tích học viên */
+.student-analysis__summary { font-size: 15px; }

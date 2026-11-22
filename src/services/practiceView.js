@@ -105,3 +105,17 @@ export function asUtc(value) {
   if (!value || typeof value !== 'string') return value
   return /(Z|[+-]\d{2}:\d{2})$/i.test(value) ? value : `${value}Z`
 }
+
+// To-be T11: điền sẵn form từ ?subjectId=&chapterId=&tagId= (từ trang Phân tích). Chỉ nhận id có trong options.
+export function prefillFromQuery(query, subjects) {
+  const id = (name) => { const v = Number(query?.get?.(name)); return Number.isInteger(v) && v > 0 ? v : null }
+  const subject = (subjects || []).find((x) => x.id === id('subjectId'))
+  if (!subject) return null
+  const chapterId = id('chapterId'); const tagId = id('tagId')
+  return {
+    subjectId: subject.id,
+    chapterIds: chapterId && (subject.chapters || []).some((x) => x.id === chapterId) ? [chapterId] : [],
+    questionLevelIds: [],
+    tagIds: tagId && (subject.tags || []).some((x) => x.id === tagId) ? [tagId] : [],
+  }
+}
