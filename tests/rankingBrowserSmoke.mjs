@@ -4,7 +4,7 @@
 // Biến môi trường: DACN_QA_TEACHER_EMAIL, DACN_QA_STUDENT_EMAIL, DACN_QA_PASSWORD, DACN_QA_TAG, DACN_QA_DATABASE,
 // tùy chọn DACN_FE_ORIGIN, DACN_CHROME_PATH.
 import { spawn } from 'node:child_process'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
@@ -77,6 +77,12 @@ class Page {
       const row = [...document.querySelectorAll('tr')].find((node) => node.innerText.includes(${JSON.stringify(rowText)})); if (!row) return false
       const el = [...row.querySelectorAll('button')].find((node) => node.innerText.trim() === ${JSON.stringify(text)} && !node.disabled)
       if (!el) return false; el.click(); return true })()`), `click "${text}" in row ${rowText}`)
+  }
+  click(text, scope = 'body') {
+    return eventually(() => this.eval(`(() => {
+      const root = document.querySelector(${JSON.stringify(scope)}); if (!root) return false
+      const el = [...root.querySelectorAll('button')].find((node) => node.innerText.trim() === ${JSON.stringify(text)} && !node.disabled)
+      if (!el) return false; el.click(); return true })()`), `click "${text}"`)
   }
   clickTab(text) {
     return eventually(() => this.eval(`(() => {
@@ -155,6 +161,23 @@ try {
   await page.noErrorAlert('teacher report')
   await page.shot('t12-teacher-report')
   pass('giảng viên: tab Phân tích lớp có tỉ lệ đúng theo chương và giải thích lớp chưa đủ 10 lượt cho câu hay sai')
+
+  // To-be T13: "Xuất Excel" tải file .xlsx (tên theo BE, nội dung là zip "PK")
+  const downloads = await mkdtemp(path.join(tmpdir(), 'dacn-t13-download-'))
+  try {
+    await page.call('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads })
+    await page.click('Xuất Excel', '.teacher-detail')
+    const file = await eventually(async () => {
+      const names = (await readdir(downloads)).filter((x) => x.endsWith('.xlsx'))
+      return names.length === 1 ? names[0] : null
+    }, 'downloaded xlsx', 100)
+    if (!/^bao-cao-lop-T10FE-[0-9a-f]+-\d{8}-\d{4}\.xlsx$/.test(file)) throw new Error(`Tên file lạ: ${file}`)
+    const head = (await readFile(path.join(downloads, file))).subarray(0, 2).toString('latin1')
+    if (head !== 'PK') throw new Error('File tải về không phải .xlsx (zip)')
+    await page.waitText('Đã xuất', 'thông báo đã xuất', '.teacher-detail')
+    await page.noErrorAlert('teacher export')
+    pass(`giảng viên: "Xuất Excel" tải ${file}`)
+  } finally { await rm(downloads, { recursive: true, force: true }).catch(() => {}) }
 
   // ---- Học viên
   await page.login(studentEmail, '/student/')

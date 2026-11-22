@@ -36,6 +36,7 @@ export const rankingRule = (data) =>
 const ERRORS = {
   CLASS_TOO_LARGE: 'Lớp quá lớn để xếp hạng trực tiếp (giới hạn 500 học viên, 200 lịch thi).',
   CLASS_NOT_FOUND: 'Bạn không còn là thành viên đã duyệt của lớp này.',
+  EXPORT_TOO_LARGE: 'File báo cáo quá lớn để xuất (giới hạn 10 MB).',
 }
 export function rankingErrorMessage(failure, fallback) {
   const code = failure?.response?.data?.message
