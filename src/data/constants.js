@@ -26,4 +26,5 @@ export const ROUTES = {
   audit: '/admin/audit',
   mySchedules: '/student/schedules',
   myPractice: '/student/practice',
+  myAnalysis: '/student/analysis',
 }
