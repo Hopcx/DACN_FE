@@ -1,5 +1,5 @@
-// To-be T10 — Xếp hạng lớp qua Chrome headless: giảng viên mở tab "Xếp hạng" (hạng, Top/Bottom, lịch chưa tính);
-// học viên mở "Kết quả của tôi" (chỉ điểm/hạng của mình, không thấy tên bạn khác).
+// To-be T10/T12 — Xếp hạng lớp + Phân tích lớp qua Chrome headless: giảng viên mở tab "Xếp hạng" (hạng, Top/Bottom, lịch chưa tính)
+// và tab "Phân tích lớp" (theo chương, câu hay sai); học viên mở "Kết quả của tôi" (chỉ điểm/hạng của mình).
 // Runner: DACN_Project/tests/TaskToBeT10RankingFrontendSmoke.ps1 (tạo fixture theo tag, dọn trong finally).
 // Biến môi trường: DACN_QA_TEACHER_EMAIL, DACN_QA_STUDENT_EMAIL, DACN_QA_PASSWORD, DACN_QA_TAG, DACN_QA_DATABASE,
 // tùy chọn DACN_FE_ORIGIN, DACN_CHROME_PATH.
@@ -143,6 +143,18 @@ try {
   await page.noErrorAlert('teacher ranking')
   await page.shot('t10-teacher-ranking')
   pass('giảng viên: tab Xếp hạng có hạng, điểm thang 10, Top/Bottom tô màu, lịch chưa tính kèm lý do')
+
+  // To-be T12: tab "Phân tích lớp" — theo chương + giải thích vì sao chưa có câu hay sai (6 lượt < 10)
+  await page.clickTab('Phân tích lớp')
+  await page.waitText(`T10 FE chương ${tag}`, 'chương trong báo cáo', '.class-report')
+  const chapterRow = await eventually(() => page.eval(`(() => { const r = [...document.querySelectorAll('.class-report tr')]
+    .find((x) => x.innerText.includes(${JSON.stringify(`T10 FE chương ${tag}`)})); return r ? r.innerText.replace(/[\\s]+/g, ' ').trim() : '' })()`), 'chapter row')
+  if (!/ 6 16,7% 6 0$/.test(chapterRow)) throw new Error(`Dòng chương lệch: ${chapterRow}`)
+  await page.waitText('nhiều nhất hiện có: 6', 'giải thích chưa đủ 10 lượt', '.class-report')
+  await page.waitText('1 lịch đã kết thúc', 'phạm vi (lịch đang mở không tính)', '.class-report')
+  await page.noErrorAlert('teacher report')
+  await page.shot('t12-teacher-report')
+  pass('giảng viên: tab Phân tích lớp có tỉ lệ đúng theo chương và giải thích lớp chưa đủ 10 lượt cho câu hay sai')
 
   // ---- Học viên
   await page.login(studentEmail, '/student/')
