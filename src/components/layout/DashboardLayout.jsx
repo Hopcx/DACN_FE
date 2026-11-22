@@ -20,6 +20,7 @@ const STUDENT_NAV = [
   { to: ROUTES.myClasses, label: 'Lớp', icon: <ReadOutlined /> },
   { to: ROUTES.mySchedules, label: 'Lịch thi', icon: <ScheduleOutlined /> },
   { to: ROUTES.myPractice, label: 'Luyện tập', icon: <ExperimentOutlined /> },
+  { to: ROUTES.myAnalysis, label: 'Phân tích', icon: <BarChartOutlined /> },
   { to: '/student/attempts', label: 'Bài đã làm', icon: <HistoryOutlined /> },
 ]
 

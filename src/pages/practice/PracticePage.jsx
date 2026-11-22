@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Alert, Button, Col, Empty, Form, InputNumber, Popconfirm, Radio, Row, Select, Space, Table, Typography } from 'antd'
 import { DeleteOutlined, EyeOutlined, PlayCircleOutlined, RedoOutlined, ReloadOutlined, RocketOutlined } from '@ant-design/icons'
 import PageHeader from '../../components/ui/PageHeader'
@@ -8,7 +8,7 @@ import StatusTag from '../../components/ui/StatusTag'
 import { getApiError } from '../../api/response'
 import { abandonPractice, createPractice, getMyPractice, getPracticeOptions, retryPractice } from '../../services/practiceService'
 import { asUtc, buildCreateBody, DEFAULT_COUNT, KIND_LABELS, MAX_DURATION, maxSelectable, MIN_DURATION, MODE_LABELS,
-  practiceErrorMessage, resultLabel, STATE_LABELS, suggestedMinutes } from '../../services/practiceView'
+  practiceErrorMessage, prefillFromQuery, resultLabel, STATE_LABELS, suggestedMinutes } from '../../services/practiceView'
 import { formatScheduleTime } from '../../services/scheduleTime'
 import { formatDuration } from '../../services/attemptReview'
 
@@ -47,6 +47,15 @@ export default function PracticePage() {
   useEffect(() => { loadHistory() }, [loadHistory])
 
   const subjects = useMemo(() => options?.subjects || [], [options])
+  // To-be T11: "Luyện tập chương/tag này" từ trang Phân tích — điền sẵn một lần khi đã có options
+  const [searchParams] = useSearchParams()
+  const prefilledRef = useRef(false)
+  useEffect(() => {
+    if (!options || prefilledRef.current) return
+    prefilledRef.current = true
+    const values = prefillFromQuery(searchParams, options.subjects)
+    if (values) form.setFieldsValue(values)
+  }, [form, options, searchParams])
   const subject = subjects.find((x) => x.id === subjectId)
   const limit = maxSelectable(subject, { chapterIds, questionLevelIds, tagIds })
   // Số câu không vượt cận trên khi đổi môn/bộ lọc (giữ lựa chọn của người dùng nếu vẫn hợp lệ)
