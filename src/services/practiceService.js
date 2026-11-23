@@ -10,8 +10,10 @@ export const getMyPractice = async (page = 1, pageSize = 10) =>
 export const getPractice = async (id) => readPayload(await axiosClient.get(`${base}/${id}`))
 export const savePractice = async (id, revision, answers) =>
   readPayload(await axiosClient.put(`${base}/${id}/answers`, { revision, answers }))
-export const checkPracticeQuestion = async (id, questionId, revision, selectedAnswerIds) =>
-  readPayload(await axiosClient.post(`${base}/${id}/questions/${questionId}/check`, { revision, selectedAnswerIds }))
+// To-be T16: câu điền ngắn gửi text (selectedAnswerIds rỗng)
+export const checkPracticeQuestion = async (id, questionId, revision, selectedAnswerIds, text) =>
+  readPayload(await axiosClient.post(`${base}/${id}/questions/${questionId}/check`,
+    text == null ? { revision, selectedAnswerIds } : { revision, selectedAnswerIds, text }))
 export const finishPractice = async (id, revision) => readPayload(await axiosClient.post(`${base}/${id}/finish`, { revision }))
 export const getPracticeReview = async (id) => readPayload(await axiosClient.get(`${base}/${id}/review`))
 export const retryPractice = async (id) => readPayload(await axiosClient.post(`${base}/${id}/retry`))

@@ -9,6 +9,8 @@ import { getApiError } from '../../api/response'
 import StatusTag from '../../components/ui/StatusTag'
 import QuestionMediaView from '../../components/media/QuestionMediaView'
 import { createMediaRetry, mergeMedia } from '../../services/mediaView'
+import { answerPayload, draftValue, hasAnswer, isShortAnswer } from '../../services/shortAnswerView'
+import { ShortAnswerInput, ShortAnswerReview } from '../../components/question/ShortAnswer'
 import { formatDuration, reviewErrorMessage, reviewQuestionState } from '../../services/attemptReview'
 import { getAttempt, getAttemptReview, getVisibilityCount, recordVisibilityHidden,
   saveAttempt, submitAttempt } from '../../services/attemptService'
@@ -17,8 +19,9 @@ import { formatClock, formatVnMoment, formatVnSeconds } from '../../utils/durati
 import useReviewFlags from '../../hooks/useReviewFlags'
 import { visibleQuestions } from '../../services/reviewFlags'
 
-const toDraft = (answers = []) => Object.fromEntries(answers.map((x) => [x.questionId, x.selectedAnswerIds]))
-const payload = (questions, choices) => questions.map((q) => ({ questionId: q.id, selectedAnswerIds: choices[q.id] || [] }))
+// To-be T16: câu điền ngắn giữ chuỗi bài làm (text); loại khác giữ mảng Id đáp án
+const toDraft = (answers = []) => Object.fromEntries(answers.map((x) => [x.questionId, draftValue(x)]))
+const payload = (questions, choices) => questions.map((q) => answerPayload(q, choices[q.id]))
 const LETTERS = 'ABCDEFGHIJ'
 const AUTOSAVE_MS = 15000
 const finishedTitle = { voided: 'Đã hủy', timedOut: 'Đã hết thời gian làm bài', submitted: 'Đã nộp bài' }
@@ -175,7 +178,7 @@ export default function StudentAttemptPage() {
   const reviewItem = reviewQuestions[reviewCurrent]
   const reviewQuestion = reviewItem?.question
   const question = questions[Math.min(current, Math.max(0, questions.length - 1))]
-  const answeredCount = questions.filter((q) => (choices[q.id] || []).length > 0).length
+  const answeredCount = questions.filter((q) => hasAnswer(choices[q.id])).length
   const locked = busy || remaining === 0
   const meta = [
     schedule?.classNames?.length ? `Lớp: ${schedule.classNames.join(', ')}` : null,
@@ -219,7 +222,7 @@ export default function StudentAttemptPage() {
               <span><FlagFilled className="legend-flag" />Đánh dấu</span>
             </div>
             <div className="attempt-palette__grid">{questions.map((item, index) => {
-              const answered = (choices[item.id] || []).length > 0
+              const answered = hasAnswer(choices[item.id])
               const classes = ['palette-item', answered && 'is-answered', index === current && 'is-current', flags.has(item.id) && 'is-flagged']
               return <button type="button" key={item.id} className={classes.filter(Boolean).join(' ')}
                 aria-label={`Câu ${index + 1}${answered ? ', đã trả lời' : ''}`} onClick={() => setCurrent(index)}>{index + 1}</button>
@@ -229,12 +232,15 @@ export default function StudentAttemptPage() {
 
           {question && <Card className="attempt-question" id={`question-${question.id}`}
             title={<span>Câu <strong className="attempt-question__no">{current + 1}/{questions.length}</strong>
-              {question.questionTypeId === 3 && <Tag className="ml-2" color="blue">Chọn nhiều đáp án</Tag>}</span>}
+              {question.questionTypeId === 3 && <Tag className="ml-2" color="blue">Chọn nhiều đáp án</Tag>}
+              {isShortAnswer(question) && <Tag className="ml-2" color="purple">Điền ngắn</Tag>}</span>}
             extra={<Button type="text" icon={flags.has(question.id) ? <FlagFilled className="legend-flag" /> : <FlagOutlined />}
               onClick={() => toggleFlag(question.id)}>{flags.has(question.id) ? 'Bỏ đánh dấu' : 'Đánh dấu'}</Button>}>
             <Typography.Paragraph className="attempt-question__content">{question.content}</Typography.Paragraph>
             <QuestionMediaView media={question.media} onMediaError={retryMedia} />
-            {question.questionTypeId === 3
+            {isShortAnswer(question)
+              ? <ShortAnswerInput disabled={locked} value={choices[question.id]} onChange={(text) => choose(question, text)} />
+              : question.questionTypeId === 3
               ? <Checkbox.Group disabled={locked} value={choices[question.id] || []} className="attempt-options"
                   onChange={(values) => choose(question, values)}
                   options={question.options.map((option, i) => ({ label: `${LETTERS[i] || i + 1}. ${option.content}`, value: option.id }))} />
@@ -244,7 +250,8 @@ export default function StudentAttemptPage() {
                     <Radio key={option.id} value={option.id}>{LETTERS[i] || i + 1}. {option.content}</Radio>)}</Space>
                 </Radio.Group>}
             <div className="attempt-question__footer">
-              <Button type="link" disabled={locked || !(choices[question.id] || []).length} onClick={() => choose(question, [])}>Bỏ chọn</Button>
+              <Button type="link" disabled={locked || !hasAnswer(choices[question.id])}
+                onClick={() => choose(question, isShortAnswer(question) ? '' : [])}>{isShortAnswer(question) ? 'Xóa câu trả lời' : 'Bỏ chọn'}</Button>
               <Space>
                 <Button icon={<LeftOutlined />} disabled={current === 0} onClick={() => setCurrent((x) => x - 1)}>Câu trước</Button>
                 <Button disabled={current >= questions.length - 1} onClick={() => setCurrent((x) => x + 1)}>Câu sau <RightOutlined /></Button>
@@ -328,6 +335,8 @@ export default function StudentAttemptPage() {
               onClick={() => toggleFlag(reviewQuestion.id)}>{flags.has(reviewQuestion.id) ? 'Bỏ đánh dấu' : 'Đánh dấu'}</Button>}>
             <Typography.Paragraph className="attempt-question__content">{reviewQuestion.content}</Typography.Paragraph>
             <QuestionMediaView media={reviewQuestion.media} onMediaError={retryReviewMedia} />
+            {isShortAnswer(reviewQuestion) && <ShortAnswerReview text={reviewQuestion.text} isCorrect={reviewQuestion.isCorrect}
+              acceptedAnswers={reviewQuestion.acceptedAnswers} />}
             {reviewQuestion.options.map((option, i) => {
               const picked = reviewQuestion.selectedAnswerIds.includes(option.id)
               return <div key={option.id} className={`review-option ${option.isCorrect ? 'is-correct' : ''} ${picked && !option.isCorrect ? 'is-wrong' : ''}`}>
@@ -336,7 +345,7 @@ export default function StudentAttemptPage() {
                 {option.isCorrect && <Tag color="green" className="ml-2">Đáp án đúng</Tag>}
               </div>
             })}
-            {reviewQuestionState(reviewQuestion) === 'empty' && <Typography.Text type="secondary">Bạn chưa trả lời câu này.</Typography.Text>}
+            {!isShortAnswer(reviewQuestion) && reviewQuestionState(reviewQuestion) === 'empty' && <Typography.Text type="secondary">Bạn chưa trả lời câu này.</Typography.Text>}
             {/* To-be T4: lời giải chụp trong snapshot v2; lượt cũ (v1) hoặc câu không có lời giải → không hiện */}
             {reviewQuestion.explanation && <div className="review-explanation">
               <Typography.Text strong>Lời giải</Typography.Text>

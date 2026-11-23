@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
-import { Alert, Button, Checkbox, Col, Form, Input, Modal, Popconfirm, Row, Select, Space, Table, Tag, Tooltip, Typography } from 'antd'
+import { Alert, Button, Checkbox, Col, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Space, Switch, Table, Tag, Tooltip,
+  Typography } from 'antd'
 import { DeleteOutlined, DownloadOutlined, EditOutlined, EyeInvisibleOutlined, EyeOutlined, FileExcelOutlined,
   PaperClipOutlined, PlusOutlined, ReloadOutlined, UploadOutlined } from '@ant-design/icons'
 import PageHeader from '../../components/ui/PageHeader'
@@ -14,6 +15,8 @@ import { createQuestion, createTag, deleteQuestion, downloadQuestionTemplate, ge
 import { chapterProblem, duplicateTagId, EXPLANATION_MAX, MAX_TAGS, metadataOptions, normalizeTagName, questionBody,
   restoreBody, tagKey, tagProblem, tagSummary } from '../../services/questionMetadata'
 import { excelErrorMessage } from '../../services/excelFile'
+import { answersForTypeChange, MAX_ACCEPTED, MAX_TEXT, MAX_TOLERANCE, SHORT_ANSWER_TYPE, shortAnswerProblem,
+  shortAnswerRuleText } from '../../services/shortAnswerView'
 import { clampPage, rowNumber, showTotalLabel, statusView } from '../../services/listView'
 
 const defaultAnswers = () => [{ content: '', isCorrect: false }, { content: '', isCorrect: false }]
@@ -50,6 +53,8 @@ export default function QuestionBankPage() {
   const requestRef = useRef(0)
   // Mỗi lần mở/đóng form là một phiên; kết quả tạo tag về muộn không ghi vào form của phiên khác
   const formSessionRef = useRef(0)
+  // Loại câu đang soạn (để biết đổi từ loại nào khi chọn loại mới)
+  const typeRef = useRef(undefined)
 
   const load = useCallback(async () => {
     if (!allowed) return
@@ -84,6 +89,7 @@ export default function QuestionBankPage() {
 
   function showForm(item) {
     formSessionRef.current += 1
+    typeRef.current = item?.questionTypeId
     setEditing(item || null); setFormError(''); setTagSearch('')
     // Xóa trắng trước: form Thêm không mang theo môn/chương/tag của câu vừa sửa
     form.resetFields()
@@ -122,14 +128,18 @@ export default function QuestionBankPage() {
 
   async function save(values) {
     if (creatingTag) return
-    const answers = (values.answers || []).map((x) => ({ content: x.content?.trim(), isCorrect: Boolean(x.isCorrect) }))
+    const isShort = values.questionTypeId === SHORT_ANSWER_TYPE
+    const answers = (values.answers || []).map((x) => ({ content: x.content?.trim(), isCorrect: isShort || Boolean(x.isCorrect) }))
     const correct = answers.filter((x) => x.isCorrect).length
-    if (answers.length < 2 || answers.length > 20 || answers.some((x) => !x.content) ||
+    // To-be T16: câu điền ngắn kiểm theo quy tắc riêng (1–10 đáp án chấp nhận, không trùng sau chuẩn hóa)
+    const shortProblem = isShort ? shortAnswerProblem({ ...values, answers }) : null
+    if (shortProblem) { setFormError(shortProblem); return }
+    if (!isShort && (answers.length < 2 || answers.length > 20 || answers.some((x) => !x.content) ||
       new Set(answers.map((x) => x.content.toLocaleLowerCase())).size !== answers.length ||
       (values.questionTypeId === 1 && (answers.length !== 2 || correct !== 1 ||
         !['đúng', 'sai'].every((text) => answers.some((x) => x.content.toLocaleLowerCase() === text)))) ||
       (values.questionTypeId === 2 && correct !== 1) ||
-      (values.questionTypeId === 3 && correct < 1)) {
+      (values.questionTypeId === 3 && correct < 1))) {
       setFormError('Tập đáp án không hợp lệ cho loại câu hỏi. Cần nội dung khác nhau và số đáp án đúng phù hợp.')
       return
     }
@@ -229,7 +239,7 @@ export default function QuestionBankPage() {
         <Select allowClear placeholder="Mức độ" aria-label="Lọc theo mức độ" style={{ minWidth: 140 }} options={choices(levels)}
           onChange={(questionLevelId) => changeExportFilter({ questionLevelId })} />
         <Select allowClear placeholder="Loại" aria-label="Lọc theo loại câu hỏi" style={{ minWidth: 170 }}
-          options={choices(types).filter((x) => x.value <= 3)}
+          options={choices(types).filter((x) => x.value <= SHORT_ANSWER_TYPE)}
           onChange={(questionTypeId) => changeExportFilter({ questionTypeId })} />
         <Select allowClear placeholder="Chương" aria-label="Lọc theo chương" style={{ minWidth: 170 }} popupMatchSelectWidth={false}
           disabled={!filters.subjectId} title={filters.subjectId ? undefined : 'Chọn môn học để lọc theo chương'}
@@ -271,7 +281,9 @@ export default function QuestionBankPage() {
             const view = statusView(value); return <StatusTag tone={view.tone}>{view.label}</StatusTag>
           } },
           { title: 'Đáp án', key: 'answers', width: 220, ellipsis: true,
-            render: (_, item) => item.answers?.map((x) => `${x.content}${x.isCorrect ? ' ✓' : ''}`).join(' · ') },
+            render: (_, item) => item.questionTypeId === SHORT_ANSWER_TYPE
+              ? `Chấp nhận: ${item.answers?.map((x) => x.content).join(' · ')}`
+              : item.answers?.map((x) => `${x.content}${x.isCorrect ? ' ✓' : ''}`).join(' · ') },
           { title: 'Thao tác', key: 'actions', width: 170, render: (_, item) => item.isUsedInExam
             ? <StatusTag tone="info">Đã dùng trong đề</StatusTag>
             : <div className="page-actions">
@@ -328,6 +340,13 @@ export default function QuestionBankPage() {
         if (changed.questionTypeId === 1) form.setFieldValue('answers', [
           { content: 'Đúng', isCorrect: true }, { content: 'Sai', isCorrect: false },
         ])
+        // To-be T16: đổi sang/khỏi điền ngắn thì chuyển bộ đáp án, giữ nội dung đã nhập (review T16)
+        if ('questionTypeId' in changed) {
+          const previous = typeRef.current
+          typeRef.current = changed.questionTypeId
+          const next = answersForTypeChange(form.getFieldValue('answers'), previous, changed.questionTypeId)
+          if (next) form.setFieldValue('answers', next)
+        }
       }}>
         <Row gutter={12}>
           <Col xs={24} md={10}>
@@ -345,7 +364,7 @@ export default function QuestionBankPage() {
           </Col>
         </Row>
         <Form.Item name="questionTypeId" label="Loại câu hỏi" rules={[{ required: true, message: 'Chọn loại câu hỏi' }]}>
-          <Select options={choices(types).filter((x) => x.value <= 3)} />
+          <Select options={choices(types).filter((x) => x.value <= SHORT_ANSWER_TYPE)} />
         </Form.Item>
         <Row gutter={12}>
           {/* Chương/tag phụ thuộc giá trị form: render theo dependencies (tránh Form.useWatch khi modal chưa mở) */}
@@ -383,6 +402,37 @@ export default function QuestionBankPage() {
         {/* To-be T14: media chỉ gắn được cho câu đã lưu (cần Id) */}
         {editing ? <QuestionMediaPanel questionId={editing.id} onChanged={load} />
           : <Typography.Paragraph type="secondary">Lưu câu hỏi trước, sau đó mở “Sửa” để thêm ảnh/âm thanh.</Typography.Paragraph>}
+        <Form.Item noStyle dependencies={['questionTypeId', 'shortAnswerNumeric', 'shortAnswerIgnoreDiacritics', 'shortAnswerTolerance']}>
+          {({ getFieldValue }) => getFieldValue('questionTypeId') === SHORT_ANSWER_TYPE ? <>
+            {/* To-be T16: câu điền ngắn — danh sách đáp án chấp nhận + tùy chọn so khớp */}
+            <Typography.Title level={5}>Đáp án chấp nhận</Typography.Title>
+            <Typography.Paragraph type="secondary" className="short-answer-rule">
+              Học viên trả lời khớp một đáp án bất kỳ là đúng ({shortAnswerRuleText({
+                shortAnswerIgnoreDiacritics: getFieldValue('shortAnswerIgnoreDiacritics'),
+                shortAnswerNumeric: getFieldValue('shortAnswerNumeric'), shortAnswerTolerance: getFieldValue('shortAnswerTolerance') })}).
+            </Typography.Paragraph>
+            <Space wrap className="mb-3">
+              <Form.Item name="shortAnswerIgnoreDiacritics" valuePropName="checked" className="mb-0">
+                <Switch checkedChildren="Bỏ dấu" unCheckedChildren="Phân biệt dấu" aria-label="Bỏ qua dấu tiếng Việt" />
+              </Form.Item>
+              <Form.Item name="shortAnswerNumeric" valuePropName="checked" className="mb-0">
+                <Switch checkedChildren="So số" unCheckedChildren="So chữ" aria-label="So sánh như số" />
+              </Form.Item>
+              {getFieldValue('shortAnswerNumeric') && <Form.Item name="shortAnswerTolerance" label="Sai số ±" className="mb-0">
+                <InputNumber min={0} max={MAX_TOLERANCE} step={0.01} precision={6} stringMode={false} placeholder="0" />
+              </Form.Item>}
+            </Space>
+            <Form.List name="answers">{(fields, { add, remove: removeAnswer }) => <>
+              {fields.map(({ key, name }) => <Space key={key} align="baseline" className="flex mb-2">
+                <Form.Item name={[name, 'content']} rules={[{ required: true, whitespace: true, message: 'Nhập đáp án chấp nhận' }]} className="grow mb-0">
+                  <Input placeholder="Đáp án chấp nhận" maxLength={MAX_TEXT} />
+                </Form.Item>
+                <Button danger icon={<DeleteOutlined />} disabled={fields.length <= 1} onClick={() => removeAnswer(name)}>Xóa</Button>
+              </Space>)}
+              <Button icon={<PlusOutlined />} disabled={fields.length >= MAX_ACCEPTED} onClick={() => add({ content: '', isCorrect: true })}>
+                Thêm đáp án chấp nhận</Button>
+            </>}</Form.List>
+          </> : <>
         <Typography.Title level={5}>Đáp án</Typography.Title>
         <Form.List name="answers">{(fields, { add, remove: removeAnswer }) => <>
           {fields.map(({ key, name }) => <Space key={key} align="baseline" className="flex mb-2">
@@ -394,6 +444,8 @@ export default function QuestionBankPage() {
           </Space>)}
           <Button icon={<PlusOutlined />} onClick={() => add({ content: '', isCorrect: false })}>Thêm đáp án</Button>
         </>}</Form.List>
+          </>}
+        </Form.Item>
       </Form>
     </Modal>
   </section>
