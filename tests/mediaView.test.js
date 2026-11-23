@@ -42,3 +42,41 @@ test('resolveMediaUrl keeps relative URL for same-origin, prefixes API origin ot
   assert.equal(resolveMediaUrl('https://x/y', '/web'), 'https://x/y')
   assert.equal(resolveMediaUrl('', '/web'), '')
 })
+
+test('mergeMedia replaces only media by question id', async () => {
+  const { mergeMedia } = await import('../src/services/mediaView.js')
+  const target = { state: 'inProgress', questions: [{ id: 'a', content: 'A', media: [{ url: 'old' }] }, { id: 'b', content: 'B' }] }
+  const merged = mergeMedia(target, [{ id: 'a', media: [{ url: 'new' }] }])
+  assert.equal(merged.questions[0].media[0].url, 'new')
+  assert.equal(merged.questions[0].content, 'A')
+  assert.equal(merged.questions[1], target.questions[1])
+  assert.equal(merged.state, 'inProgress')
+  assert.equal(mergeMedia(null, []), null)
+})
+
+test('orphanErrorMessage maps codes', async () => {
+  const { orphanErrorMessage } = await import('../src/services/mediaView.js')
+  const e = (message) => ({ response: { data: { message } } })
+  assert.match(orphanErrorMessage(e('MEDIA_IN_USE'), 'x'), /đang được/)
+  assert.match(orphanErrorMessage(e('MEDIA_TOO_RECENT'), 'x'), /24 giờ/)
+  assert.equal(orphanErrorMessage(e('OTHER'), 'fb'), 'fb')
+})
+
+test('createMediaRetry: mỗi media id thử lại 1 lần, lỗi cùng lúc dùng chung 1 request', async () => {
+  const { createMediaRetry } = await import('../src/services/mediaView.js')
+  let calls = 0
+  const retry = createMediaRetry(async () => { calls += 1 })
+  await Promise.all([retry('a'), retry('b'), retry('a')])
+  assert.equal(calls, 1)
+  // URL mới vẫn lỗi (404 thật) → không gọi lại cho a/b
+  assert.equal(await retry('a'), false)
+  await retry('b')
+  assert.equal(calls, 1)
+  // media khác lỗi sau → được 1 lần
+  await retry('c')
+  assert.equal(calls, 2)
+  assert.equal(await retry(undefined), false)
+  // run lỗi không ném ra ngoài
+  const failing = createMediaRetry(async () => { throw new Error('x') })
+  assert.equal(await failing('z'), false)
+})

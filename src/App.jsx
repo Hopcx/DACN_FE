@@ -15,6 +15,7 @@ const AdminDashboardPage = lazy(() => import('./pages/dashboard/AdminDashboardPa
 const AdminAttemptsPage = lazy(() => import('./pages/dashboard/AdminAttemptsPage'))
 const TeacherOverviewPage = lazy(() => import('./pages/dashboard/TeacherOverviewPage'))
 const AdminAuditPage = lazy(() => import('./pages/audit/AdminAuditPage'))
+const AdminOrphanMediaPage = lazy(() => import('./pages/media/AdminOrphanMediaPage'))
 const ProfilePage = lazy(() => import('./pages/account/ProfilePage'))
 const AdminUsersPage = lazy(() => import('./pages/account/AdminUsersPage'))
 const CatalogPage = lazy(() => import('./pages/catalog/CatalogPage'))
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route path="attempts" element={<AdminAttemptsPage />} />
           <Route path="audit" element={<AdminAuditPage />} />
+          <Route path="media-orphans" element={<AdminOrphanMediaPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="levels" element={<CatalogPage key="levels" kind="levels" />} />
