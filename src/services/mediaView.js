@@ -59,3 +59,30 @@ export function resolveMediaUrl(url, baseURL) {
   } catch { /* baseURL hỏng → giữ đường dẫn tương đối */ }
   return url
 }
+
+// To-be T15: thay media (URL ký mới) của các câu theo Id, giữ nguyên phần còn lại của state (đáp án đang chọn…)
+export function mergeMedia(target, freshQuestions) {
+  if (!target?.questions || !Array.isArray(freshQuestions)) return target
+  const byId = new Map(freshQuestions.map((q) => [q.id, q.media || []]))
+  return { ...target, questions: target.questions.map((q) => byId.has(q.id) ? { ...q, media: byId.get(q.id) } : q) }
+}
+
+const ORPHAN_ERRORS = {
+  MEDIA_IN_USE: 'Media đang được câu hỏi hoặc bài làm dùng nên không xóa được.',
+  MEDIA_TOO_RECENT: 'Media mới tải lên chưa đủ 24 giờ nên chưa được xóa.',
+  MEDIA_NOT_FOUND: 'Media không còn (có thể đã bị xóa).',
+}
+export const orphanErrorMessage = (failure, fallback) => ORPHAN_ERRORS[failure?.response?.data?.message] || fallback
+
+// To-be T15 (review): media lỗi → lấy URL mới, nhưng mỗi media id chỉ thử lại 1 lần cho cả trang
+// và các lỗi cùng lúc dùng chung một lần gọi API — media hỏng thật (404) không gây vòng lặp.
+export function createMediaRetry(run) {
+  const tried = new Set()
+  let pending = null
+  return (mediaId) => {
+    if (!mediaId || tried.has(mediaId)) return pending || Promise.resolve(false)
+    tried.add(mediaId)
+    if (!pending) pending = Promise.resolve().then(run).then(() => true, () => false).finally(() => { pending = null })
+    return pending
+  }
+}

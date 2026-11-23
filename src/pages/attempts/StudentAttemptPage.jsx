@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Alert, Button, Card, Checkbox, Modal, Radio, Space, Switch, Tag, Typography } from 'antd'
 import {
@@ -7,6 +7,8 @@ import {
 } from '@ant-design/icons'
 import { getApiError } from '../../api/response'
 import StatusTag from '../../components/ui/StatusTag'
+import QuestionMediaView from '../../components/media/QuestionMediaView'
+import { createMediaRetry, mergeMedia } from '../../services/mediaView'
 import { formatDuration, reviewErrorMessage, reviewQuestionState } from '../../services/attemptReview'
 import { getAttempt, getAttemptReview, getVisibilityCount, recordVisibilityHidden,
   saveAttempt, submitAttempt } from '../../services/attemptService'
@@ -63,6 +65,15 @@ export default function StudentAttemptPage() {
     } catch (failure) { setError(getApiError(failure)) }
   }, [id])
   useEffect(() => { load() }, [load])
+  // To-be T15: URL media hết hạn → lấy URL mới, chỉ thay media (không đụng đáp án đang chọn)
+  const refreshMedia = useCallback(async () => {
+    try { const data = await getAttempt(id); setAttempt((prev) => mergeMedia(prev, data.questions)) } catch { /* giữ nguyên */ }
+  }, [id])
+  const refreshReviewMedia = useCallback(async () => {
+    try { const data = await getAttemptReview(id); setReview((prev) => mergeMedia(prev, data.questions)) } catch { /* giữ nguyên */ }
+  }, [id])
+  const retryMedia = useMemo(() => createMediaRetry(refreshMedia), [refreshMedia])
+  const retryReviewMedia = useMemo(() => createMediaRetry(refreshReviewMedia), [refreshReviewMedia])
   useEffect(() => {
     if (attempt?.state !== 'inProgress') return undefined
     const key = `attempt-visibility-pending:${id}`
@@ -222,6 +233,7 @@ export default function StudentAttemptPage() {
             extra={<Button type="text" icon={flags.has(question.id) ? <FlagFilled className="legend-flag" /> : <FlagOutlined />}
               onClick={() => toggleFlag(question.id)}>{flags.has(question.id) ? 'Bỏ đánh dấu' : 'Đánh dấu'}</Button>}>
             <Typography.Paragraph className="attempt-question__content">{question.content}</Typography.Paragraph>
+            <QuestionMediaView media={question.media} onMediaError={retryMedia} />
             {question.questionTypeId === 3
               ? <Checkbox.Group disabled={locked} value={choices[question.id] || []} className="attempt-options"
                   onChange={(values) => choose(question, values)}
@@ -315,6 +327,7 @@ export default function StudentAttemptPage() {
             extra={<Button type="text" icon={flags.has(reviewQuestion.id) ? <FlagFilled className="legend-flag" /> : <FlagOutlined />}
               onClick={() => toggleFlag(reviewQuestion.id)}>{flags.has(reviewQuestion.id) ? 'Bỏ đánh dấu' : 'Đánh dấu'}</Button>}>
             <Typography.Paragraph className="attempt-question__content">{reviewQuestion.content}</Typography.Paragraph>
+            <QuestionMediaView media={reviewQuestion.media} onMediaError={retryReviewMedia} />
             {reviewQuestion.options.map((option, i) => {
               const picked = reviewQuestion.selectedAnswerIds.includes(option.id)
               return <div key={option.id} className={`review-option ${option.isCorrect ? 'is-correct' : ''} ${picked && !option.isCorrect ? 'is-wrong' : ''}`}>

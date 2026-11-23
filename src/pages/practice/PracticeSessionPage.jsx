@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Alert, Button, Card, Checkbox, Modal, Radio, Space, Switch, Tag, Typography } from 'antd'
 import { ArrowLeftOutlined, CheckCircleFilled, CheckOutlined, ClockCircleOutlined, FlagFilled, FlagOutlined, LeftOutlined, RedoOutlined,
@@ -10,6 +10,8 @@ import { KIND_LABELS, MODE_LABELS, paletteState, practiceErrorMessage, remaining
 import { formatClock } from '../../utils/duration'
 import useReviewFlags from '../../hooks/useReviewFlags'
 import { visibleQuestions } from '../../services/reviewFlags'
+import QuestionMediaView from '../../components/media/QuestionMediaView'
+import { createMediaRetry, mergeMedia } from '../../services/mediaView'
 
 const LETTERS = 'ABCDEFGHIJ'
 const AUTOSAVE_MS = 15000
@@ -65,6 +67,15 @@ export default function PracticeSessionPage() {
       setReview(data.state === 'finished' ? await getPracticeReview(id) : null)
     } catch (failure) { setError(practiceErrorMessage(failure)) }
   }, [id])
+  // To-be T15: URL media hết hạn → lấy URL mới, chỉ thay media (không đụng đáp án đang chọn)
+  const refreshMedia = useCallback(async () => {
+    try {
+      const data = await getPractice(id)
+      setSession((prev) => mergeMedia(prev, data.questions))
+      if (data.state === 'finished') { const fresh = await getPracticeReview(id); setReview((prev) => mergeMedia(prev, fresh.questions)) }
+    } catch { /* giữ nguyên */ }
+  }, [id])
+  const retryMedia = useMemo(() => createMediaRetry(refreshMedia), [refreshMedia])
   // Đổi phiên (vd. sau "Làm lại bộ này"): xóa trạng thái phiên cũ trước khi tải
   useEffect(() => { setCurrent(0); setSession(null); setReview(null); setChoices({}); setDirty(false); setOnlyFlagged(false); load() }, [load])
   // Rời trang/tải lại khi còn thay đổi chưa lưu: trình duyệt hỏi xác nhận
@@ -249,6 +260,7 @@ export default function PracticeSessionPage() {
             {(result || finished) && <Tag className="ml-2" color={(result || reviewMap[question.id])?.isCorrect ? 'green' : 'red'}>
               {(result || reviewMap[question.id])?.isCorrect ? 'Đúng' : 'Sai'}</Tag>}</span>}>
           <Typography.Paragraph className="attempt-question__content">{question.content}</Typography.Paragraph>
+          <QuestionMediaView media={question.media} onMediaError={retryMedia} />
           {finished
             ? <>
               <RevealedOptions options={question.options} selected={question.selectedAnswerIds}

@@ -14,3 +14,7 @@ export const detachQuestionMedia = async (questionId, mediaId) =>
   readPayload(await axiosClient.delete(`/questions/${questionId}/media/${mediaId}`))
 // Gốc API để ghép URL media khi API khác origin (xem resolveMediaUrl)
 export const apiBaseURL = () => axiosClient.defaults.baseURL
+// To-be T15: media mồ côi (Admin)
+export const getOrphanMedia = async (page = 1, pageSize = 20) =>
+  readPayload(await axiosClient.get('/admin/media/orphans', { params: { page, pageSize } }))
+export const deleteOrphanMedia = async (id) => readPayload(await axiosClient.delete(`/admin/media/${id}`))
