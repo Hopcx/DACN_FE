@@ -12,6 +12,8 @@ import useReviewFlags from '../../hooks/useReviewFlags'
 import { visibleQuestions } from '../../services/reviewFlags'
 import QuestionMediaView from '../../components/media/QuestionMediaView'
 import { createMediaRetry, mergeMedia } from '../../services/mediaView'
+import { hasAnswer, isShortAnswer } from '../../services/shortAnswerView'
+import { ShortAnswerInput, ShortAnswerReview } from '../../components/question/ShortAnswer'
 
 const LETTERS = 'ABCDEFGHIJ'
 const AUTOSAVE_MS = 15000
@@ -116,8 +118,10 @@ export default function PracticeSessionPage() {
 
   const check = async (question) => {
     if (busy) return
-    const selected = choices[question.id] || []
-    if (!selected.length) { setError('Hãy chọn đáp án trước khi kiểm tra.'); return }
+    // To-be T16: câu điền ngắn gửi text, không chọn đáp án
+    const shortAnswer = isShortAnswer(question)
+    const selected = choices[question.id] || (shortAnswer ? '' : [])
+    if (!hasAnswer(selected)) { setError(shortAnswer ? 'Hãy nhập câu trả lời trước khi kiểm tra.' : 'Hãy chọn đáp án trước khi kiểm tra.'); return }
     setBusy(true); setError('')
     let base = session
     try {
@@ -128,12 +132,15 @@ export default function PracticeSessionPage() {
         base = { ...session, revision: saved.revision, answers: saved.answers }
         setSession(base); setDirty(false)
       }
-      const outcome = await checkPracticeQuestion(id, question.id, base.revision, selected)
+      const outcome = shortAnswer
+        ? await checkPracticeQuestion(id, question.id, base.revision, [], selected.trim())
+        : await checkPracticeQuestion(id, question.id, base.revision, selected)
       const answers = [...base.answers.filter((x) => x.questionId !== question.id),
-        { questionId: question.id, selectedAnswerIds: outcome.result.selectedAnswerIds }]
+        shortAnswer ? { questionId: question.id, selectedAnswerIds: [], text: outcome.result.text }
+          : { questionId: question.id, selectedAnswerIds: outcome.result.selectedAnswerIds }]
       setSession({ ...base, revision: outcome.revision, answers,
         checked: [...(base.checked || []).filter((x) => x.questionId !== question.id), outcome.result] })
-      setChoices((old) => ({ ...old, [question.id]: outcome.result.selectedAnswerIds }))
+      setChoices((old) => ({ ...old, [question.id]: shortAnswer ? outcome.result.text ?? '' : outcome.result.selectedAnswerIds }))
       setDirty(false)
       // Revision nhảy khác +1: câu đã được chốt ở tab khác (kết quả cũ) hoặc có ghi khác → lấy lại trạng thái máy chủ
       if (outcome.revision !== base.revision + 1) await load()
@@ -193,7 +200,7 @@ export default function PracticeSessionPage() {
   const reviewMap = Object.fromEntries((review?.questions || []).map((x) => [x.id, { isCorrect: x.isCorrect }]))
   const number = items[index]?.number
   const question = items[index]?.question
-  const answered = (session?.questions || []).filter((q) => (choices[q.id] || []).length > 0).length
+  const answered = (session?.questions || []).filter((q) => hasAnswer(choices[q.id])).length
   const perQuestion = session?.revealMode === 'perQuestion'
   const result = question && !finished ? checkedMap[question.id] : null
 
@@ -241,7 +248,7 @@ export default function PracticeSessionPage() {
           </label>}
           <div className="attempt-palette__grid">{items.map(({ question: item, number: no }, i) => {
             const state = finished
-              ? (reviewMap[item.id]?.isCorrect ? 'right' : item.selectedAnswerIds?.length ? 'wrong' : 'empty')
+              ? (reviewMap[item.id]?.isCorrect ? 'right' : (item.selectedAnswerIds?.length || item.text?.trim()) ? 'wrong' : 'empty')
               : paletteState(item.id, choices, checkedMap)
             const classes = ['palette-item', state === 'answered' && 'is-pending', state === 'right' && 'is-right',
               state === 'wrong' && 'is-wrong', i === index && 'is-current', flags.has(item.id) && 'is-flagged']
@@ -257,22 +264,35 @@ export default function PracticeSessionPage() {
             onClick={() => toggleFlag(question.id)}>{flags.has(question.id) ? 'Bỏ đánh dấu' : 'Đánh dấu'}</Button>}
           title={<span>Câu <strong className="attempt-question__no">{number}/{allItems.length}</strong>
             {question.questionTypeId === 3 && <Tag className="ml-2" color="blue">Chọn nhiều đáp án</Tag>}
+            {isShortAnswer(question) && <Tag className="ml-2" color="purple">Điền ngắn</Tag>}
             {(result || finished) && <Tag className="ml-2" color={(result || reviewMap[question.id])?.isCorrect ? 'green' : 'red'}>
               {(result || reviewMap[question.id])?.isCorrect ? 'Đúng' : 'Sai'}</Tag>}</span>}>
           <Typography.Paragraph className="attempt-question__content">{question.content}</Typography.Paragraph>
           <QuestionMediaView media={question.media} onMediaError={retryMedia} />
-          {finished
+          {finished && isShortAnswer(question)
+            ? <>
+              <ShortAnswerReview text={question.text} isCorrect={question.isCorrect} acceptedAnswers={question.acceptedAnswers} />
+              <Explanation text={question.explanation} />
+            </>
+            : finished
             ? <>
               <RevealedOptions options={question.options} selected={question.selectedAnswerIds}
                 correctIds={question.options.filter((x) => x.isCorrect).map((x) => x.id)} />
               {!question.selectedAnswerIds.length && <Typography.Text type="secondary">Bạn chưa trả lời câu này.</Typography.Text>}
               <Explanation text={question.explanation} />
             </>
+            : result && isShortAnswer(question)
+              ? <>
+                <ShortAnswerReview text={result.text} isCorrect={result.isCorrect} acceptedAnswers={result.acceptedAnswers} />
+                <Explanation text={result.explanation} />
+              </>
             : result
               ? <>
                 <RevealedOptions options={question.options} selected={result.selectedAnswerIds} correctIds={result.correctAnswerIds} />
                 <Explanation text={result.explanation} />
               </>
+              : isShortAnswer(question)
+                ? <ShortAnswerInput disabled={busy || timeUp} value={choices[question.id]} onChange={(text) => choose(question, text)} />
               : question.questionTypeId === 3
                 ? <Checkbox.Group disabled={busy || timeUp} value={choices[question.id] || []} className="attempt-options"
                   onChange={(values) => choose(question, values)}
@@ -285,7 +305,7 @@ export default function PracticeSessionPage() {
           <div className="attempt-question__footer">
             {!finished && !result && perQuestion
               ? <Button type="primary" ghost icon={<CheckOutlined />} loading={busy}
-                disabled={!(choices[question.id] || []).length} onClick={() => check(question)}>Kiểm tra câu này</Button>
+                disabled={!hasAnswer(choices[question.id])} onClick={() => check(question)}>Kiểm tra câu này</Button>
               : <span />}
             <Space>
               <Button icon={<LeftOutlined />} disabled={index === 0} onClick={() => go(index - 1)}>Câu trước</Button>
