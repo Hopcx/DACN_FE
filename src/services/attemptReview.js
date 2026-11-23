@@ -28,6 +28,8 @@ export function formatDuration(seconds) {
 
 /** Trạng thái từng câu ở bảng số câu xem lại: 'answered' nếu có selectedAnswerIds, ngược lại 'empty'. */
 export function reviewQuestionState(question) {
+  // To-be T16: câu điền ngắn trả lời bằng text
+  if (typeof question?.text === 'string' && question.text.trim()) return 'answered'
   return Array.isArray(question?.selectedAnswerIds) && question.selectedAnswerIds.length > 0 ? 'answered' : 'empty'
 }
 

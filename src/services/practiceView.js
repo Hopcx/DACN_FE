@@ -1,5 +1,6 @@
 // To-be T7: hàm thuần cho giao diện Luyện tập (không axios để chạy bằng node --test).
 import { getApiError } from '../api/response.js'
+import { answerPayload, draftValue, hasAnswer } from './shortAnswerView.js'
 
 export const MODE_LABELS = { end: 'Cuối phiên', perQuestion: 'Từng câu' }
 export const STATE_LABELS = { inProgress: 'Đang làm', finished: 'Đã nộp', expired: 'Hết giờ' }
@@ -84,15 +85,16 @@ export function maxSelectable(subject, values = {}) {
     sum(subject.levels, values.questionLevelIds), sum(subject.tags, values.tagIds))
 }
 
-export const toDraft = (answers = []) => Object.fromEntries(answers.map((x) => [x.questionId, x.selectedAnswerIds]))
-export const toPayload = (questions, choices) => questions.map((q) => ({ questionId: q.id, selectedAnswerIds: choices[q.id] || [] }))
+// To-be T16: câu điền ngắn giữ chuỗi bài làm (text) thay cho mảng Id đáp án
+export const toDraft = (answers = []) => Object.fromEntries(answers.map((x) => [x.questionId, draftValue(x)]))
+export const toPayload = (questions, choices) => questions.map((q) => answerPayload(q, choices[q.id]))
 export const toCheckedMap = (checked = []) => Object.fromEntries(checked.map((x) => [x.questionId, x]))
 
 /** Trạng thái ô câu trên bảng: right/wrong (đã kiểm tra), answered, empty. */
 export function paletteState(questionId, choices, checkedMap) {
   const result = checkedMap?.[questionId]
   if (result) return result.isCorrect ? 'right' : 'wrong'
-  return (choices?.[questionId] || []).length > 0 ? 'answered' : 'empty'
+  return hasAnswer(choices?.[questionId]) ? 'answered' : 'empty'
 }
 
 /** Kết quả "x/y" của một phiên trong lịch sử; chưa nộp → "—". */
