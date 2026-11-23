@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux'
 import { Avatar, Dropdown } from 'antd'
 import {
   ApartmentOutlined, AppstoreOutlined, BankOutlined, BarChartOutlined, BookOutlined, CalendarOutlined, DashboardOutlined, ExperimentOutlined, FileTextOutlined,
-  FileSearchOutlined, HistoryOutlined, HomeOutlined, KeyOutlined, LogoutOutlined, MenuOutlined, QuestionCircleOutlined,
+  FileSearchOutlined, HistoryOutlined, PictureOutlined, HomeOutlined, KeyOutlined, LogoutOutlined, MenuOutlined, QuestionCircleOutlined,
   ReadOutlined, SafetyOutlined, ScheduleOutlined, SolutionOutlined, TeamOutlined, UserOutlined,
 } from '@ant-design/icons'
 import { logout } from '../../services/authService'
@@ -57,6 +57,7 @@ export default function DashboardLayout() {
         { title: 'Báo cáo', items: [
           { to: ROUTES.attempts, label: 'Danh sách bài làm', icon: <BarChartOutlined /> },
           { to: ROUTES.audit, label: 'Nhật ký hệ thống', icon: <FileSearchOutlined /> },
+          { to: ROUTES.orphanMedia, label: 'Media mồ côi', icon: <PictureOutlined /> },
         ] },
         { title: 'Phân quyền', items: [
           { to: ROUTES.levels, label: 'Cấp tài khoản', icon: <SolutionOutlined /> },

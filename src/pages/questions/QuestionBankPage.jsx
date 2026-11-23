@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Alert, Button, Checkbox, Col, Form, Input, Modal, Popconfirm, Row, Select, Space, Table, Tag, Tooltip, Typography } from 'antd'
 import { DeleteOutlined, DownloadOutlined, EditOutlined, EyeInvisibleOutlined, EyeOutlined, FileExcelOutlined,
-  PlusOutlined, ReloadOutlined, UploadOutlined } from '@ant-design/icons'
+  PaperClipOutlined, PlusOutlined, ReloadOutlined, UploadOutlined } from '@ant-design/icons'
 import PageHeader from '../../components/ui/PageHeader'
 import PageCard from '../../components/ui/PageCard'
 import StatusTag from '../../components/ui/StatusTag'
+import QuestionMediaPanel from './QuestionMediaPanel'
 import { LoadError, TableEmpty } from '../../components/ui/PageState'
 import { getApiError, toLoadError } from '../../api/response'
 import { createQuestion, createTag, deleteQuestion, downloadQuestionTemplate, getChapters, getQuestionLevels, getQuestions,
@@ -249,7 +250,10 @@ export default function QuestionBankPage() {
         locale={{ emptyText: <TableEmpty error={Boolean(loadError)} errorLabel="Không tải được dữ liệu." filtered={filtered}
           emptyLabel="Chưa có câu hỏi" filteredLabel="Không có câu hỏi khớp bộ lọc" /> }} columns={[
           { title: 'STT', key: 'stt', width: 64, align: 'center', render: (_, __, index) => rowNumber(currentPage, 10, index) },
-          { title: 'Nội dung câu hỏi', dataIndex: 'content', width: 320, ellipsis: { showTitle: true } },
+          { title: 'Nội dung câu hỏi', dataIndex: 'content', width: 320, ellipsis: { showTitle: true },
+            // To-be T14: đánh dấu câu có media
+            render: (value, item) => item.mediaCount > 0 ? <span><Tooltip title={`${item.mediaCount} ảnh/âm thanh`}>
+              <PaperClipOutlined aria-label={`${item.mediaCount} media`} className="question-media__mark" /></Tooltip> {value}</span> : value },
           { title: 'Môn học', dataIndex: 'subjectId', width: 160, render: (id) => label(subjects, id) },
           { title: 'Chương', dataIndex: 'chapterId', width: 160, ellipsis: { showTitle: true },
             render: (id) => (id == null ? '—' : chapterName(id) ?? `#${id}`) },
@@ -376,6 +380,9 @@ export default function QuestionBankPage() {
         <Form.Item name="explanation" label="Lời giải (không bắt buộc)">
           <Input.TextArea rows={3} maxLength={EXPLANATION_MAX} showCount placeholder="Giải thích đáp án đúng" />
         </Form.Item>
+        {/* To-be T14: media chỉ gắn được cho câu đã lưu (cần Id) */}
+        {editing ? <QuestionMediaPanel questionId={editing.id} onChanged={load} />
+          : <Typography.Paragraph type="secondary">Lưu câu hỏi trước, sau đó mở “Sửa” để thêm ảnh/âm thanh.</Typography.Paragraph>}
         <Typography.Title level={5}>Đáp án</Typography.Title>
         <Form.List name="answers">{(fields, { add, remove: removeAnswer }) => <>
           {fields.map(({ key, name }) => <Space key={key} align="baseline" className="flex mb-2">

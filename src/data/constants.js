@@ -24,6 +24,7 @@ export const ROUTES = {
   teacherClasses: '/teacher/classes',
   teacherOverview: '/teacher/overview',
   audit: '/admin/audit',
+  orphanMedia: '/admin/media-orphans',
   mySchedules: '/student/schedules',
   myPractice: '/student/practice',
   myAnalysis: '/student/analysis',
