@@ -17,6 +17,7 @@ import { chapterProblem, duplicateTagId, EXPLANATION_MAX, MAX_TAGS, metadataOpti
 import { excelErrorMessage } from '../../services/excelFile'
 import { answersForTypeChange, MAX_ACCEPTED, MAX_TEXT, MAX_TOLERANCE, SHORT_ANSWER_TYPE, shortAnswerProblem,
   shortAnswerRuleText } from '../../services/shortAnswerView'
+import { itemsProblem, MATCHING_TYPE, MAX_ITEMS, MIN_ITEMS, STATEMENTS_TYPE } from '../../services/itemAnswerView'
 import { clampPage, rowNumber, showTotalLabel, statusView } from '../../services/listView'
 
 const defaultAnswers = () => [{ content: '', isCorrect: false }, { content: '', isCorrect: false }]
@@ -95,7 +96,7 @@ export default function QuestionBankPage() {
     form.resetFields()
     form.setFieldsValue(item ? {
       ...item, explanation: item.explanation ?? '', tagIds: item.tagIds ?? [], chapterId: item.chapterId ?? undefined,
-      answers: item.answers.map(({ content, isCorrect }) => ({ content, isCorrect })),
+      answers: item.answers.map(({ content, isCorrect, matchContent }) => ({ content, isCorrect, matchContent: matchContent ?? undefined })),
     } : { content: '', status: 1, explanation: '', tagIds: [], answers: defaultAnswers() })
     setOpen(true)
   }
@@ -129,12 +130,17 @@ export default function QuestionBankPage() {
   async function save(values) {
     if (creatingTag) return
     const isShort = values.questionTypeId === SHORT_ANSWER_TYPE
-    const answers = (values.answers || []).map((x) => ({ content: x.content?.trim(), isCorrect: isShort || Boolean(x.isCorrect) }))
+    const isItems = [MATCHING_TYPE, STATEMENTS_TYPE].includes(values.questionTypeId)
+    const answers = (values.answers || []).map((x) => ({ content: x.content?.trim(), isCorrect: isShort || Boolean(x.isCorrect),
+      matchContent: x.matchContent?.trim() }))
     const correct = answers.filter((x) => x.isCorrect).length
     // To-be T16: câu điền ngắn kiểm theo quy tắc riêng (1–10 đáp án chấp nhận, không trùng sau chuẩn hóa)
     const shortProblem = isShort ? shortAnswerProblem({ ...values, answers }) : null
     if (shortProblem) { setFormError(shortProblem); return }
-    if (!isShort && (answers.length < 2 || answers.length > 20 || answers.some((x) => !x.content) ||
+    // To-be T17: ghép cặp / nhiều mệnh đề kiểm theo quy tắc riêng (2–10 mục, không trùng)
+    const itemProblem = isItems ? itemsProblem(values.questionTypeId, answers) : null
+    if (itemProblem) { setFormError(itemProblem); return }
+    if (!isShort && !isItems && (answers.length < 2 || answers.length > 20 || answers.some((x) => !x.content) ||
       new Set(answers.map((x) => x.content.toLocaleLowerCase())).size !== answers.length ||
       (values.questionTypeId === 1 && (answers.length !== 2 || correct !== 1 ||
         !['đúng', 'sai'].every((text) => answers.some((x) => x.content.toLocaleLowerCase() === text)))) ||
@@ -239,7 +245,7 @@ export default function QuestionBankPage() {
         <Select allowClear placeholder="Mức độ" aria-label="Lọc theo mức độ" style={{ minWidth: 140 }} options={choices(levels)}
           onChange={(questionLevelId) => changeExportFilter({ questionLevelId })} />
         <Select allowClear placeholder="Loại" aria-label="Lọc theo loại câu hỏi" style={{ minWidth: 170 }}
-          options={choices(types).filter((x) => x.value <= SHORT_ANSWER_TYPE)}
+          options={choices(types).filter((x) => x.value <= STATEMENTS_TYPE)}
           onChange={(questionTypeId) => changeExportFilter({ questionTypeId })} />
         <Select allowClear placeholder="Chương" aria-label="Lọc theo chương" style={{ minWidth: 170 }} popupMatchSelectWidth={false}
           disabled={!filters.subjectId} title={filters.subjectId ? undefined : 'Chọn môn học để lọc theo chương'}
@@ -283,6 +289,8 @@ export default function QuestionBankPage() {
           { title: 'Đáp án', key: 'answers', width: 220, ellipsis: true,
             render: (_, item) => item.questionTypeId === SHORT_ANSWER_TYPE
               ? `Chấp nhận: ${item.answers?.map((x) => x.content).join(' · ')}`
+              : item.questionTypeId === MATCHING_TYPE ? item.answers?.map((x) => `${x.content} ↔ ${x.matchContent}`).join(' · ')
+              : item.questionTypeId === STATEMENTS_TYPE ? item.answers?.map((x) => `${x.content} (${x.isCorrect ? 'Đ' : 'S'})`).join(' · ')
               : item.answers?.map((x) => `${x.content}${x.isCorrect ? ' ✓' : ''}`).join(' · ') },
           { title: 'Thao tác', key: 'actions', width: 170, render: (_, item) => item.isUsedInExam
             ? <StatusTag tone="info">Đã dùng trong đề</StatusTag>
@@ -364,7 +372,7 @@ export default function QuestionBankPage() {
           </Col>
         </Row>
         <Form.Item name="questionTypeId" label="Loại câu hỏi" rules={[{ required: true, message: 'Chọn loại câu hỏi' }]}>
-          <Select options={choices(types).filter((x) => x.value <= SHORT_ANSWER_TYPE)} />
+          <Select options={choices(types).filter((x) => x.value <= STATEMENTS_TYPE)} />
         </Form.Item>
         <Row gutter={12}>
           {/* Chương/tag phụ thuộc giá trị form: render theo dependencies (tránh Form.useWatch khi modal chưa mở) */}
@@ -431,6 +439,41 @@ export default function QuestionBankPage() {
               </Space>)}
               <Button icon={<PlusOutlined />} disabled={fields.length >= MAX_ACCEPTED} onClick={() => add({ content: '', isCorrect: true })}>
                 Thêm đáp án chấp nhận</Button>
+            </>}</Form.List>
+          </> : getFieldValue('questionTypeId') === MATCHING_TYPE ? <>
+            {/* To-be T17: ghép cặp — mỗi dòng một cặp vế trái ↔ vế phải; vế phải được xáo khi học viên làm bài */}
+            <Typography.Title level={5}>Các cặp ghép</Typography.Title>
+            <Typography.Paragraph type="secondary">Học viên thấy vế phải theo thứ tự xáo trộn và phải ghép đúng tất cả các cặp.</Typography.Paragraph>
+            <Form.List name="answers">{(fields, { add, remove: removeAnswer }) => <>
+              {fields.map(({ key, name }) => <Space key={key} align="baseline" className="flex mb-2 item-row">
+                <Form.Item name={[name, 'content']} rules={[{ required: true, whitespace: true, message: 'Nhập vế trái' }]} className="grow mb-0">
+                  <Input placeholder="Vế trái" maxLength={2000} />
+                </Form.Item>
+                <span aria-hidden="true">↔</span>
+                <Form.Item name={[name, 'matchContent']} rules={[{ required: true, whitespace: true, message: 'Nhập vế phải' }]} className="grow mb-0">
+                  <Input placeholder="Vế phải" maxLength={2000} />
+                </Form.Item>
+                <Button danger icon={<DeleteOutlined />} disabled={fields.length <= MIN_ITEMS} onClick={() => removeAnswer(name)}>Xóa</Button>
+              </Space>)}
+              <Button icon={<PlusOutlined />} disabled={fields.length >= MAX_ITEMS}
+                onClick={() => add({ content: '', matchContent: '', isCorrect: true })}>Thêm cặp</Button>
+            </>}</Form.List>
+          </> : getFieldValue('questionTypeId') === STATEMENTS_TYPE ? <>
+            {/* To-be T17: nhiều mệnh đề — mỗi mệnh đề đặt Đúng/Sai; học viên phải chọn đúng tất cả */}
+            <Typography.Title level={5}>Các mệnh đề</Typography.Title>
+            <Typography.Paragraph type="secondary">Bật công tắc nếu mệnh đề đúng. Học viên chọn Đúng/Sai cho từng mệnh đề.</Typography.Paragraph>
+            <Form.List name="answers">{(fields, { add, remove: removeAnswer }) => <>
+              {fields.map(({ key, name }) => <Space key={key} align="baseline" className="flex mb-2 item-row">
+                <Form.Item name={[name, 'content']} rules={[{ required: true, whitespace: true, message: 'Nhập mệnh đề' }]} className="grow mb-0">
+                  <Input placeholder="Mệnh đề" maxLength={2000} />
+                </Form.Item>
+                <Form.Item name={[name, 'isCorrect']} valuePropName="checked" className="mb-0">
+                  <Switch checkedChildren="Đúng" unCheckedChildren="Sai" aria-label="Mệnh đề đúng" />
+                </Form.Item>
+                <Button danger icon={<DeleteOutlined />} disabled={fields.length <= MIN_ITEMS} onClick={() => removeAnswer(name)}>Xóa</Button>
+              </Space>)}
+              <Button icon={<PlusOutlined />} disabled={fields.length >= MAX_ITEMS} onClick={() => add({ content: '', isCorrect: false })}>
+                Thêm mệnh đề</Button>
             </>}</Form.List>
           </> : <>
         <Typography.Title level={5}>Đáp án</Typography.Title>

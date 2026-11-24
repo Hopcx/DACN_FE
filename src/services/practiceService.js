@@ -11,9 +11,10 @@ export const getPractice = async (id) => readPayload(await axiosClient.get(`${ba
 export const savePractice = async (id, revision, answers) =>
   readPayload(await axiosClient.put(`${base}/${id}/answers`, { revision, answers }))
 // To-be T16: câu điền ngắn gửi text (selectedAnswerIds rỗng)
-export const checkPracticeQuestion = async (id, questionId, revision, selectedAnswerIds, text) =>
+// To-be T17: câu ghép cặp / nhiều mệnh đề gửi items
+export const checkPracticeQuestion = async (id, questionId, revision, selectedAnswerIds, text, items) =>
   readPayload(await axiosClient.post(`${base}/${id}/questions/${questionId}/check`,
-    text == null ? { revision, selectedAnswerIds } : { revision, selectedAnswerIds, text }))
+    { revision, selectedAnswerIds, ...(text == null ? {} : { text }), ...(items == null ? {} : { items }) }))
 export const finishPractice = async (id, revision) => readPayload(await axiosClient.post(`${base}/${id}/finish`, { revision }))
 export const getPracticeReview = async (id) => readPayload(await axiosClient.get(`${base}/${id}/review`))
 export const retryPractice = async (id) => readPayload(await axiosClient.post(`${base}/${id}/retry`))

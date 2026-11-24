@@ -1,5 +1,6 @@
 // To-be T3: hàm thuần cho metadata câu hỏi (chương, tag, lời giải). Không import axios để chạy được bằng node --test.
 import { shortAnswerFields, SHORT_ANSWER_TYPE } from './shortAnswerView.js'
+import { MATCHING_TYPE } from './itemAnswerView.js'
 export const MAX_TAGS = 10
 export const EXPLANATION_MAX = 4000
 export const HIDDEN = 255
@@ -24,8 +25,10 @@ export function questionBody(values, editing = null) {
     explanation: explanation || null,
     tagIds: uniqueTagIds(values.tagIds),
     // To-be T16: câu điền ngắn — mọi đáp án là đáp án chấp nhận (isCorrect = true) + tùy chọn so khớp
+    // To-be T17: ghép cặp gửi vế phải (matchContent) và isCorrect = true cho mọi cặp
     answers: (values.answers || []).map((x) => ({ content: (x.content ?? '').trim(),
-      isCorrect: Number(values.questionTypeId) === SHORT_ANSWER_TYPE || Boolean(x.isCorrect) })),
+      isCorrect: [SHORT_ANSWER_TYPE, MATCHING_TYPE].includes(Number(values.questionTypeId)) || Boolean(x.isCorrect),
+      ...(Number(values.questionTypeId) === MATCHING_TYPE ? { matchContent: (x.matchContent ?? '').trim() } : {}) })),
     ...shortAnswerFields(values),
   }
 }

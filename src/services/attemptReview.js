@@ -30,6 +30,8 @@ export function formatDuration(seconds) {
 export function reviewQuestionState(question) {
   // To-be T16: câu điền ngắn trả lời bằng text
   if (typeof question?.text === 'string' && question.text.trim()) return 'answered'
+  // To-be T17: ghép cặp / nhiều mệnh đề trả lời theo mục
+  if (Array.isArray(question?.items) && question.items.length > 0) return 'answered'
   return Array.isArray(question?.selectedAnswerIds) && question.selectedAnswerIds.length > 0 ? 'answered' : 'empty'
 }
 

@@ -11,6 +11,8 @@ import QuestionMediaView from '../../components/media/QuestionMediaView'
 import { createMediaRetry, mergeMedia } from '../../services/mediaView'
 import { answerPayload, draftValue, hasAnswer, isShortAnswer } from '../../services/shortAnswerView'
 import { ShortAnswerInput, ShortAnswerReview } from '../../components/question/ShortAnswer'
+import { ItemAnswerInput, ItemAnswerReview } from '../../components/question/ItemAnswer'
+import { hasItems, isMatching, isStatements } from '../../services/itemAnswerView'
 import { formatDuration, reviewErrorMessage, reviewQuestionState } from '../../services/attemptReview'
 import { getAttempt, getAttemptReview, getVisibilityCount, recordVisibilityHidden,
   saveAttempt, submitAttempt } from '../../services/attemptService'
@@ -233,12 +235,16 @@ export default function StudentAttemptPage() {
           {question && <Card className="attempt-question" id={`question-${question.id}`}
             title={<span>Câu <strong className="attempt-question__no">{current + 1}/{questions.length}</strong>
               {question.questionTypeId === 3 && <Tag className="ml-2" color="blue">Chọn nhiều đáp án</Tag>}
-              {isShortAnswer(question) && <Tag className="ml-2" color="purple">Điền ngắn</Tag>}</span>}
+              {isShortAnswer(question) && <Tag className="ml-2" color="purple">Điền ngắn</Tag>}
+              {isMatching(question) && <Tag className="ml-2" color="geekblue">Ghép cặp</Tag>}
+              {isStatements(question) && <Tag className="ml-2" color="cyan">Đúng/Sai từng mệnh đề</Tag>}</span>}
             extra={<Button type="text" icon={flags.has(question.id) ? <FlagFilled className="legend-flag" /> : <FlagOutlined />}
               onClick={() => toggleFlag(question.id)}>{flags.has(question.id) ? 'Bỏ đánh dấu' : 'Đánh dấu'}</Button>}>
             <Typography.Paragraph className="attempt-question__content">{question.content}</Typography.Paragraph>
             <QuestionMediaView media={question.media} onMediaError={retryMedia} />
-            {isShortAnswer(question)
+            {hasItems(question)
+              ? <ItemAnswerInput question={question} disabled={locked} value={choices[question.id]} onChange={(next) => choose(question, next)} />
+              : isShortAnswer(question)
               ? <ShortAnswerInput disabled={locked} value={choices[question.id]} onChange={(text) => choose(question, text)} />
               : question.questionTypeId === 3
               ? <Checkbox.Group disabled={locked} value={choices[question.id] || []} className="attempt-options"
@@ -251,7 +257,8 @@ export default function StudentAttemptPage() {
                 </Radio.Group>}
             <div className="attempt-question__footer">
               <Button type="link" disabled={locked || !hasAnswer(choices[question.id])}
-                onClick={() => choose(question, isShortAnswer(question) ? '' : [])}>{isShortAnswer(question) ? 'Xóa câu trả lời' : 'Bỏ chọn'}</Button>
+                onClick={() => choose(question, isShortAnswer(question) ? '' : hasItems(question) ? {} : [])}>
+                {isShortAnswer(question) || hasItems(question) ? 'Xóa câu trả lời' : 'Bỏ chọn'}</Button>
               <Space>
                 <Button icon={<LeftOutlined />} disabled={current === 0} onClick={() => setCurrent((x) => x - 1)}>Câu trước</Button>
                 <Button disabled={current >= questions.length - 1} onClick={() => setCurrent((x) => x + 1)}>Câu sau <RightOutlined /></Button>
@@ -337,7 +344,8 @@ export default function StudentAttemptPage() {
             <QuestionMediaView media={reviewQuestion.media} onMediaError={retryReviewMedia} />
             {isShortAnswer(reviewQuestion) && <ShortAnswerReview text={reviewQuestion.text} isCorrect={reviewQuestion.isCorrect}
               acceptedAnswers={reviewQuestion.acceptedAnswers} />}
-            {reviewQuestion.options.map((option, i) => {
+            {hasItems(reviewQuestion) && <ItemAnswerReview question={reviewQuestion} items={reviewQuestion.items} correctItems={reviewQuestion.correctItems} />}
+            {!hasItems(reviewQuestion) && reviewQuestion.options.map((option, i) => {
               const picked = reviewQuestion.selectedAnswerIds.includes(option.id)
               return <div key={option.id} className={`review-option ${option.isCorrect ? 'is-correct' : ''} ${picked && !option.isCorrect ? 'is-wrong' : ''}`}>
                 {LETTERS[i] || i + 1}. {option.content}
