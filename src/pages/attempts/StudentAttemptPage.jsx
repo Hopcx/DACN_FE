@@ -12,6 +12,8 @@ import { createMediaRetry, mergeMedia } from '../../services/mediaView'
 import { answerPayload, draftValue, hasAnswer, isShortAnswer } from '../../services/shortAnswerView'
 import { ShortAnswerInput, ShortAnswerReview } from '../../components/question/ShortAnswer'
 import { ItemAnswerInput, ItemAnswerReview } from '../../components/question/ItemAnswer'
+import GroupPassage from '../../components/question/GroupPassage'
+import { groupOf, groupRange } from '../../services/questionGroupView'
 import { hasItems, isMatching, isStatements } from '../../services/itemAnswerView'
 import { formatDuration, reviewErrorMessage, reviewQuestionState } from '../../services/attemptReview'
 import { getAttempt, getAttemptReview, getVisibilityCount, recordVisibilityHidden,
@@ -72,10 +74,10 @@ export default function StudentAttemptPage() {
   useEffect(() => { load() }, [load])
   // To-be T15: URL media hết hạn → lấy URL mới, chỉ thay media (không đụng đáp án đang chọn)
   const refreshMedia = useCallback(async () => {
-    try { const data = await getAttempt(id); setAttempt((prev) => mergeMedia(prev, data.questions)) } catch { /* giữ nguyên */ }
+    try { const data = await getAttempt(id); setAttempt((prev) => mergeMedia(prev, data.questions, data.groups)) } catch { /* giữ nguyên */ }
   }, [id])
   const refreshReviewMedia = useCallback(async () => {
-    try { const data = await getAttemptReview(id); setReview((prev) => mergeMedia(prev, data.questions)) } catch { /* giữ nguyên */ }
+    try { const data = await getAttemptReview(id); setReview((prev) => mergeMedia(prev, data.questions, data.groups)) } catch { /* giữ nguyên */ }
   }, [id])
   const retryMedia = useMemo(() => createMediaRetry(refreshMedia), [refreshMedia])
   const retryReviewMedia = useMemo(() => createMediaRetry(refreshReviewMedia), [refreshReviewMedia])
@@ -240,6 +242,8 @@ export default function StudentAttemptPage() {
               {isStatements(question) && <Tag className="ml-2" color="cyan">Đúng/Sai từng mệnh đề</Tag>}</span>}
             extra={<Button type="text" icon={flags.has(question.id) ? <FlagFilled className="legend-flag" /> : <FlagOutlined />}
               onClick={() => toggleFlag(question.id)}>{flags.has(question.id) ? 'Bỏ đánh dấu' : 'Đánh dấu'}</Button>}>
+            {/* To-be T18: đoạn dùng chung phía trên câu con */}
+            <GroupPassage group={groupOf(attempt.groups, question)} range={groupRange(questions, question.groupId)} onMediaError={retryMedia} />
             <Typography.Paragraph className="attempt-question__content">{question.content}</Typography.Paragraph>
             <QuestionMediaView media={question.media} onMediaError={retryMedia} />
             {hasItems(question)
@@ -340,6 +344,7 @@ export default function StudentAttemptPage() {
             title={<span>Câu <strong className="attempt-question__no">{reviewItem.number}/{reviewAll.length}</strong></span>}
             extra={<Button type="text" icon={flags.has(reviewQuestion.id) ? <FlagFilled className="legend-flag" /> : <FlagOutlined />}
               onClick={() => toggleFlag(reviewQuestion.id)}>{flags.has(reviewQuestion.id) ? 'Bỏ đánh dấu' : 'Đánh dấu'}</Button>}>
+            <GroupPassage group={groupOf(review.groups, reviewQuestion)} range={groupRange(reviewAll, reviewQuestion.groupId)} onMediaError={retryReviewMedia} />
             <Typography.Paragraph className="attempt-question__content">{reviewQuestion.content}</Typography.Paragraph>
             <QuestionMediaView media={reviewQuestion.media} onMediaError={retryReviewMedia} />
             {isShortAnswer(reviewQuestion) && <ShortAnswerReview text={reviewQuestion.text} isCorrect={reviewQuestion.isCorrect}

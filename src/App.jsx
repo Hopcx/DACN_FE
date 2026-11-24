@@ -24,6 +24,7 @@ const AdminClassesPage = lazy(() => import('./pages/classes/AdminClassesPage'))
 const StudentClassesPage = lazy(() => import('./pages/classes/StudentClassesPage'))
 const TeacherClassesPage = lazy(() => import('./pages/classes/TeacherClassesPage'))
 const QuestionBankPage = lazy(() => import('./pages/questions/QuestionBankPage'))
+const QuestionGroupPage = lazy(() => import('./pages/questions/QuestionGroupPage'))
 const ExamManagementPage = lazy(() => import('./pages/exams/ExamManagementPage'))
 const AdminSchedulesPage = lazy(() => import('./pages/schedules/AdminSchedulesPage'))
 const StudentSchedulesPage = lazy(() => import('./pages/schedules/StudentSchedulesPage'))
@@ -62,6 +63,7 @@ export default function App() {
           <Route path="rooms" element={<CatalogPage key="rooms" kind="rooms" />} />
           <Route path="classes" element={<AdminClassesPage />} />
           <Route path="questions" element={<QuestionBankPage />} />
+          <Route path="question-groups" element={<QuestionGroupPage />} />
           <Route path="exams" element={<ExamManagementPage />} />
           <Route path="schedules" element={<AdminSchedulesPage />} />
         </Route>

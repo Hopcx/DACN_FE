@@ -61,10 +61,12 @@ export function resolveMediaUrl(url, baseURL) {
 }
 
 // To-be T15: thay media (URL ký mới) của các câu theo Id, giữ nguyên phần còn lại của state (đáp án đang chọn…)
-export function mergeMedia(target, freshQuestions) {
+// To-be T18: freshGroups (tùy chọn) thay danh sách đoạn dùng chung (URL media của đoạn cũng hết hạn)
+export function mergeMedia(target, freshQuestions, freshGroups) {
   if (!target?.questions || !Array.isArray(freshQuestions)) return target
   const byId = new Map(freshQuestions.map((q) => [q.id, q.media || []]))
-  return { ...target, questions: target.questions.map((q) => byId.has(q.id) ? { ...q, media: byId.get(q.id) } : q) }
+  return { ...target, questions: target.questions.map((q) => byId.has(q.id) ? { ...q, media: byId.get(q.id) } : q),
+    ...(Array.isArray(freshGroups) ? { groups: freshGroups } : {}) }
 }
 
 const ORPHAN_ERRORS = {

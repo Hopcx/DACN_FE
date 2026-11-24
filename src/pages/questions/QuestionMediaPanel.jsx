@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Button, Popconfirm, Space, Typography, Upload } from 'antd'
 import { DeleteOutlined, PaperClipOutlined, ReloadOutlined } from '@ant-design/icons'
 import { getApiError } from '../../api/response'
@@ -8,7 +8,15 @@ import { ACCEPT, clientCheck, formatBytes, MAX_PER_QUESTION, mediaErrorMessage, 
 // To-be T14 (QT14-3): ảnh/âm thanh đính kèm câu hỏi — tải lên (server kiểm magic bytes), xem trước bằng URL ký tạm, gỡ.
 // Thay đổi lưu ngay (không chờ nút Lưu của câu hỏi). onChanged: để trang tải lại số media trong danh sách.
 // Review T14: câu bị khóa (đã trong đề/đã có bài làm) → chỉ xem, không tải lên (tránh file mồ côi); URL hết hạn → tự tải lại 1 lần.
-export default function QuestionMediaPanel({ questionId, onChanged }) {
+// To-be T18: source (tùy chọn, đã memo) = { load, attach(mediaId), detach(mediaId), lockedText, detachTitle } — dùng cho media của đoạn dùng chung.
+export default function QuestionMediaPanel({ questionId, onChanged, source }) {
+  const api = useMemo(() => source || {
+    load: () => getQuestionMedia(questionId),
+    attach: (mediaId) => attachQuestionMedia(questionId, mediaId),
+    detach: (mediaId) => detachQuestionMedia(questionId, mediaId),
+    lockedText: 'Câu hỏi đã nằm trong đề thi hoặc đã có bài làm nên không thêm/gỡ ảnh, âm thanh được (chỉ xem).',
+    detachTitle: 'Gỡ media khỏi câu hỏi?',
+  }, [source, questionId])
   const [data, setData] = useState({ locked: false, items: [] })
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -20,14 +28,14 @@ export default function QuestionMediaPanel({ questionId, onChanged }) {
     const requestId = ++requestRef.current
     setLoading(true); setError('')
     try {
-      const result = await getQuestionMedia(questionId)
+      const result = await api.load()
       if (requestId === requestRef.current) setData(result)
     } catch (failure) {
       if (requestId === requestRef.current) setError(mediaErrorMessage(failure, getApiError(failure)))
     } finally {
       if (requestId === requestRef.current) setLoading(false)
     }
-  }, [questionId])
+  }, [api])
   useEffect(() => { load() }, [load])
 
   async function run(operation) {
@@ -50,7 +58,7 @@ export default function QuestionMediaPanel({ questionId, onChanged }) {
     if (problem) { setError(problem); onError?.(new Error(problem)); return }
     const ok = await run(async () => {
       const media = await uploadMedia(file)
-      return attachQuestionMedia(questionId, media.id)
+      return api.attach(media.id)
     })
     if (ok) onSuccess?.({}); else onError?.(new Error('upload failed'))
   }
@@ -74,7 +82,7 @@ export default function QuestionMediaPanel({ questionId, onChanged }) {
     </Space>
     {data.locked
       ? <Alert type="info" showIcon className="page-alert"
-        title="Câu hỏi đã nằm trong đề thi hoặc đã có bài làm nên không thêm/gỡ ảnh, âm thanh được (chỉ xem)." />
+        title={api.lockedText} />
       : <Typography.Paragraph type="secondary" className="question-media__hint">
         Ảnh JPEG/PNG/WebP ≤ 2 MB (tối đa 4096 × 4096 px, không nhận ảnh động), âm thanh MP3/M4A/OGG ≤ 10 MB; tối đa {MAX_PER_QUESTION} file, 1 âm thanh.
         Ảnh có thể chứa thông tin vị trí (EXIF) — hãy xóa trước khi tải lên. Thay đổi được lưu ngay.
@@ -89,7 +97,7 @@ export default function QuestionMediaPanel({ questionId, onChanged }) {
           <span title={item.originalName}>{item.originalName}</span>
           <small className="muted">{item.kind === 'image' && item.width ? `${item.width}×${item.height} · ` : ''}{formatBytes(item.sizeBytes)}</small>
         </div>
-        {!data.locked && <Popconfirm title="Gỡ media khỏi câu hỏi?" onConfirm={() => run(() => detachQuestionMedia(questionId, item.id))}>
+        {!data.locked && <Popconfirm title={api.detachTitle} onConfirm={() => run(() => api.detach(item.id))}>
           <Button size="small" danger icon={<DeleteOutlined />} disabled={busy}>Gỡ</Button>
         </Popconfirm>}
       </div>)}

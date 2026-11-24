@@ -11,6 +11,7 @@ import { asUtc, buildCreateBody, DEFAULT_COUNT, KIND_LABELS, MAX_DURATION, maxSe
   practiceErrorMessage, prefillFromQuery, resultLabel, STATE_LABELS, suggestedMinutes } from '../../services/practiceView'
 import { formatScheduleTime } from '../../services/scheduleTime'
 import { formatDuration } from '../../services/attemptReview'
+import { practiceOverflowNote } from '../../services/questionGroupView'
 
 const withCount = (items) => (items || []).map((x) => ({ value: x.id, label: `${x.name} (${x.questionCount} câu)` }))
 
@@ -130,7 +131,7 @@ export default function PracticePage() {
               </Form.Item>
             </Col>
             <Col xs={24} md={8}>
-              <Form.Item name="questionCount" label="Số câu" extra={subject ? `Tối đa khoảng ${limit} câu với bộ lọc hiện tại.` : undefined}
+              <Form.Item name="questionCount" label="Số câu" extra={subject ? `Tối đa khoảng ${limit} câu với bộ lọc hiện tại. ${subject.hasGroups ? practiceOverflowNote(questionCount ?? DEFAULT_COUNT) : ''}` : undefined}
                 rules={[{ required: true, message: 'Nhập số câu' }, {
                   validator: (_, value) => (!subject || value == null || value <= limit ? Promise.resolve()
                     : Promise.reject(new Error(`Bộ lọc hiện tại có tối đa ${limit} câu.`))),
