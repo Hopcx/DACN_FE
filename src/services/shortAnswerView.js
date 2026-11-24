@@ -1,5 +1,6 @@
 // To-be T16: hàm thuần cho câu điền ngắn (loại 4) — khớp quy tắc BE ShortAnswerMatcher (QT16-3). Server vẫn kiểm lại.
 
+import { answeredItems, hasItems, itemsToMap, mapToItems, MATCHING_TYPE, MAX_ITEMS, MIN_ITEMS, STATEMENTS_TYPE } from './itemAnswerView.js'
 export const SHORT_ANSWER_TYPE = 4
 export const MAX_TEXT = 200
 export const MAX_ACCEPTED = 10
@@ -56,36 +57,48 @@ export function shortAnswerRuleText(question = {}) {
   return parts.join('; ')
 }
 
-/** Giá trị nháp của một câu: câu điền ngắn là chuỗi (text), loại khác là mảng Id đáp án. */
-export const draftValue = (answer) => (typeof answer?.text === 'string' ? answer.text : answer?.selectedAnswerIds || [])
+/** Giá trị nháp của một câu: điền ngắn là chuỗi (text); ghép cặp/nhiều mệnh đề (T17) là object theo mục; loại khác là mảng Id. */
+export const draftValue = (answer) => (typeof answer?.text === 'string' ? answer.text
+  : Array.isArray(answer?.items) ? itemsToMap(answer.items) : answer?.selectedAnswerIds || [])
 
-/** Có trả lời chưa: chuỗi khác rỗng (sau trim) hoặc mảng có phần tử. */
-export const hasAnswer = (value) => (typeof value === 'string' ? value.trim().length > 0 : Array.isArray(value) && value.length > 0)
+/** Có trả lời chưa: chuỗi khác rỗng (sau trim), mảng có phần tử, hoặc object có ít nhất một mục (T17). */
+export const hasAnswer = (value) => (typeof value === 'string' ? value.trim().length > 0
+  : Array.isArray(value) ? value.length > 0 : answeredItems(value) > 0)
 
-/** Câu trả lời gửi API: loại 4 gửi text (rỗng → không gửi), selectedAnswerIds luôn rỗng; loại khác gửi Id đáp án. */
+/** Câu trả lời gửi API: loại 4 gửi text; loại 5–6 gửi items; loại khác gửi Id đáp án. Phần rỗng không gửi. */
 export function answerPayload(question, value) {
   if (isShortAnswer(question)) {
     const text = typeof value === 'string' ? value.trim().slice(0, MAX_TEXT) : ''
     return text ? { questionId: question.id, selectedAnswerIds: [], text } : { questionId: question.id, selectedAnswerIds: [] }
   }
+  if (hasItems(question)) {
+    const items = mapToItems(question, value)
+    return items.length ? { questionId: question.id, selectedAnswerIds: [], items } : { questionId: question.id, selectedAnswerIds: [] }
+  }
   return { questionId: question.id, selectedAnswerIds: Array.isArray(value) ? value : [] }
 }
 
 /**
- * Review T16: đổi loại câu trong trình soạn mà không làm mất nội dung đáp án đã nhập.
- * Sang loại 4: giữ các đáp án có nội dung làm đáp án chấp nhận (tối đa 10). Từ loại 4 sang 2/3: giữ nội dung, bỏ đánh dấu đúng,
- * bù cho đủ 2 dòng. Trả null khi không cần đổi (loại 1 do trang tự đặt Đúng/Sai).
+ * Review T16 (mở rộng T17): đổi loại câu trong trình soạn mà không làm mất nội dung đáp án đã nhập.
+ * Sang loại 4: giữ đáp án có nội dung làm đáp án chấp nhận (tối đa 10). Sang loại 5: nội dung thành vế trái (giữ vế phải nếu từ loại 5).
+ * Sang loại 6: nội dung thành mệnh đề. Từ loại 4/5/6 sang 2/3: giữ nội dung, bỏ đánh dấu đúng. Bù cho đủ số dòng tối thiểu.
+ * Trả null khi không cần đổi (cùng loại, giữa 2 và 3, hoặc sang loại 1 — trang tự đặt Đúng/Sai).
  */
 export function answersForTypeChange(answers = [], fromType, toType) {
   const from = Number(fromType); const to = Number(toType)
+  if (from === to || to === 1) return null
   // Đúng/Sai (loại 1) là đáp án cố định, không mang sang
-  const filled = from === 1 ? [] : (answers || []).filter((x) => (x?.content ?? '').trim()).map((x) => x.content)
-  if (to === SHORT_ANSWER_TYPE && from !== SHORT_ANSWER_TYPE)
-    return filled.length ? filled.slice(0, MAX_ACCEPTED).map((content) => ({ content, isCorrect: true })) : [{ content: '', isCorrect: true }]
-  if (from === SHORT_ANSWER_TYPE && (to === 2 || to === 3)) {
-    const kept = filled.map((content) => ({ content, isCorrect: false }))
-    while (kept.length < 2) kept.push({ content: '', isCorrect: false })
-    return kept
-  }
+  const rows = from === 1 ? [] : (answers || []).filter((x) => (x?.content ?? '').trim())
+  const pad = (list, min, blank) => { while (list.length < min) list.push({ ...blank }); return list }
+  if (to === SHORT_ANSWER_TYPE)
+    return rows.length ? rows.slice(0, MAX_ACCEPTED).map((x) => ({ content: x.content, isCorrect: true })) : [{ content: '', isCorrect: true }]
+  if (to === MATCHING_TYPE)
+    return pad(rows.slice(0, MAX_ITEMS).map((x) => ({ content: x.content, matchContent: from === MATCHING_TYPE ? x.matchContent ?? '' : '', isCorrect: true })),
+      MIN_ITEMS, { content: '', matchContent: '', isCorrect: true })
+  if (to === STATEMENTS_TYPE)
+    return pad(rows.slice(0, MAX_ITEMS).map((x) => ({ content: x.content, isCorrect: from === STATEMENTS_TYPE ? Boolean(x.isCorrect) : false })),
+      MIN_ITEMS, { content: '', isCorrect: false })
+  if ((to === 2 || to === 3) && [SHORT_ANSWER_TYPE, MATCHING_TYPE, STATEMENTS_TYPE].includes(from))
+    return pad(rows.map((x) => ({ content: x.content, isCorrect: false })), 2, { content: '', isCorrect: false })
   return null
 }
