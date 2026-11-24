@@ -13,6 +13,8 @@ import { visibleQuestions } from '../../services/reviewFlags'
 import QuestionMediaView from '../../components/media/QuestionMediaView'
 import { createMediaRetry, mergeMedia } from '../../services/mediaView'
 import { hasAnswer, isShortAnswer } from '../../services/shortAnswerView'
+import { answeredItems, hasItems, isMatching, isStatements, itemsToMap, mapToItems } from '../../services/itemAnswerView'
+import { ItemAnswerInput, ItemAnswerReview } from '../../components/question/ItemAnswer'
 import { ShortAnswerInput, ShortAnswerReview } from '../../components/question/ShortAnswer'
 
 const LETTERS = 'ABCDEFGHIJ'
@@ -120,8 +122,19 @@ export default function PracticeSessionPage() {
     if (busy) return
     // To-be T16: câu điền ngắn gửi text, không chọn đáp án
     const shortAnswer = isShortAnswer(question)
-    const selected = choices[question.id] || (shortAnswer ? '' : [])
+    const itemized = hasItems(question)   // To-be T17: ghép cặp / nhiều mệnh đề gửi items
+    const selected = choices[question.id] || (shortAnswer ? '' : itemized ? {} : [])
     if (!hasAnswer(selected)) { setError(shortAnswer ? 'Hãy nhập câu trả lời trước khi kiểm tra.' : 'Hãy chọn đáp án trước khi kiểm tra.'); return }
+    // Review T17: kiểm tra khi còn mục trống sẽ hiện đáp án và khóa câu — hỏi lại trước
+    const total = question.options?.length || 0
+    if (itemized && answeredItems(selected) < total) {
+      const go = await new Promise((resolve) => Modal.confirm({
+        title: 'Còn mục chưa chọn',
+        content: `Bạn mới chọn ${answeredItems(selected)}/${total} mục. Kiểm tra bây giờ sẽ hiện đáp án và khóa câu này; mục chưa chọn tính là sai.`,
+        okText: 'Vẫn kiểm tra', cancelText: 'Chọn tiếp', onOk: () => resolve(true), onCancel: () => resolve(false),
+      }))
+      if (!go) return
+    }
     setBusy(true); setError('')
     let base = session
     try {
@@ -134,13 +147,16 @@ export default function PracticeSessionPage() {
       }
       const outcome = shortAnswer
         ? await checkPracticeQuestion(id, question.id, base.revision, [], selected.trim())
+        : itemized ? await checkPracticeQuestion(id, question.id, base.revision, [], undefined, mapToItems(question, selected))
         : await checkPracticeQuestion(id, question.id, base.revision, selected)
       const answers = [...base.answers.filter((x) => x.questionId !== question.id),
         shortAnswer ? { questionId: question.id, selectedAnswerIds: [], text: outcome.result.text }
+          : itemized ? { questionId: question.id, selectedAnswerIds: [], items: outcome.result.items }
           : { questionId: question.id, selectedAnswerIds: outcome.result.selectedAnswerIds }]
       setSession({ ...base, revision: outcome.revision, answers,
         checked: [...(base.checked || []).filter((x) => x.questionId !== question.id), outcome.result] })
-      setChoices((old) => ({ ...old, [question.id]: shortAnswer ? outcome.result.text ?? '' : outcome.result.selectedAnswerIds }))
+      setChoices((old) => ({ ...old, [question.id]: shortAnswer ? outcome.result.text ?? ''
+        : itemized ? itemsToMap(outcome.result.items) : outcome.result.selectedAnswerIds }))
       setDirty(false)
       // Revision nhảy khác +1: câu đã được chốt ở tab khác (kết quả cũ) hoặc có ghi khác → lấy lại trạng thái máy chủ
       if (outcome.revision !== base.revision + 1) await load()
@@ -248,7 +264,7 @@ export default function PracticeSessionPage() {
           </label>}
           <div className="attempt-palette__grid">{items.map(({ question: item, number: no }, i) => {
             const state = finished
-              ? (reviewMap[item.id]?.isCorrect ? 'right' : (item.selectedAnswerIds?.length || item.text?.trim()) ? 'wrong' : 'empty')
+              ? (reviewMap[item.id]?.isCorrect ? 'right' : (item.selectedAnswerIds?.length || item.text?.trim() || item.items?.length) ? 'wrong' : 'empty')
               : paletteState(item.id, choices, checkedMap)
             const classes = ['palette-item', state === 'answered' && 'is-pending', state === 'right' && 'is-right',
               state === 'wrong' && 'is-wrong', i === index && 'is-current', flags.has(item.id) && 'is-flagged']
@@ -265,6 +281,8 @@ export default function PracticeSessionPage() {
           title={<span>Câu <strong className="attempt-question__no">{number}/{allItems.length}</strong>
             {question.questionTypeId === 3 && <Tag className="ml-2" color="blue">Chọn nhiều đáp án</Tag>}
             {isShortAnswer(question) && <Tag className="ml-2" color="purple">Điền ngắn</Tag>}
+            {isMatching(question) && <Tag className="ml-2" color="geekblue">Ghép cặp</Tag>}
+            {isStatements(question) && <Tag className="ml-2" color="cyan">Đúng/Sai từng mệnh đề</Tag>}
             {(result || finished) && <Tag className="ml-2" color={(result || reviewMap[question.id])?.isCorrect ? 'green' : 'red'}>
               {(result || reviewMap[question.id])?.isCorrect ? 'Đúng' : 'Sai'}</Tag>}</span>}>
           <Typography.Paragraph className="attempt-question__content">{question.content}</Typography.Paragraph>
@@ -272,6 +290,11 @@ export default function PracticeSessionPage() {
           {finished && isShortAnswer(question)
             ? <>
               <ShortAnswerReview text={question.text} isCorrect={question.isCorrect} acceptedAnswers={question.acceptedAnswers} />
+              <Explanation text={question.explanation} />
+            </>
+            : finished && hasItems(question)
+            ? <>
+              <ItemAnswerReview question={question} items={question.items} correctItems={question.correctItems} />
               <Explanation text={question.explanation} />
             </>
             : finished
@@ -286,11 +309,18 @@ export default function PracticeSessionPage() {
                 <ShortAnswerReview text={result.text} isCorrect={result.isCorrect} acceptedAnswers={result.acceptedAnswers} />
                 <Explanation text={result.explanation} />
               </>
+            : result && hasItems(question)
+              ? <>
+                <ItemAnswerReview question={question} items={result.items} correctItems={result.correctItems} />
+                <Explanation text={result.explanation} />
+              </>
             : result
               ? <>
                 <RevealedOptions options={question.options} selected={result.selectedAnswerIds} correctIds={result.correctAnswerIds} />
                 <Explanation text={result.explanation} />
               </>
+              : hasItems(question)
+                ? <ItemAnswerInput question={question} disabled={busy || timeUp} value={choices[question.id]} onChange={(next) => choose(question, next)} />
               : isShortAnswer(question)
                 ? <ShortAnswerInput disabled={busy || timeUp} value={choices[question.id]} onChange={(text) => choose(question, text)} />
               : question.questionTypeId === 3
