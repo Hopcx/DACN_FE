@@ -13,6 +13,8 @@ const CODE_MESSAGES = {
   INVALID_FILTER: 'Bộ lọc không hợp lệ.',
   SUBJECT_NOT_FOUND: 'Không tìm thấy môn học.',
   NO_QUESTIONS: 'Không có câu hỏi nào khớp bộ lọc để xuất.',
+  // To-be T18: Excel chưa hỗ trợ đoạn dùng chung
+  ONLY_GROUPED_QUESTIONS: 'Mọi câu khớp bộ lọc đều thuộc đoạn dùng chung; Excel chưa hỗ trợ xuất đoạn.',
   EXPORT_TOO_LARGE: 'Quá 500 câu hỏi hoặc file vượt 2 MB. Hãy lọc thêm theo loại hoặc mức độ.',
 }
 

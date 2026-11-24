@@ -15,6 +15,8 @@ import { createMediaRetry, mergeMedia } from '../../services/mediaView'
 import { hasAnswer, isShortAnswer } from '../../services/shortAnswerView'
 import { answeredItems, hasItems, isMatching, isStatements, itemsToMap, mapToItems } from '../../services/itemAnswerView'
 import { ItemAnswerInput, ItemAnswerReview } from '../../components/question/ItemAnswer'
+import GroupPassage from '../../components/question/GroupPassage'
+import { groupOf, groupRange } from '../../services/questionGroupView'
 import { ShortAnswerInput, ShortAnswerReview } from '../../components/question/ShortAnswer'
 
 const LETTERS = 'ABCDEFGHIJ'
@@ -75,8 +77,8 @@ export default function PracticeSessionPage() {
   const refreshMedia = useCallback(async () => {
     try {
       const data = await getPractice(id)
-      setSession((prev) => mergeMedia(prev, data.questions))
-      if (data.state === 'finished') { const fresh = await getPracticeReview(id); setReview((prev) => mergeMedia(prev, fresh.questions)) }
+      setSession((prev) => mergeMedia(prev, data.questions, data.groups))
+      if (data.state === 'finished') { const fresh = await getPracticeReview(id); setReview((prev) => mergeMedia(prev, fresh.questions, fresh.groups)) }
     } catch { /* giữ nguyên */ }
   }, [id])
   const retryMedia = useMemo(() => createMediaRetry(refreshMedia), [refreshMedia])
@@ -285,6 +287,9 @@ export default function PracticeSessionPage() {
             {isStatements(question) && <Tag className="ml-2" color="cyan">Đúng/Sai từng mệnh đề</Tag>}
             {(result || finished) && <Tag className="ml-2" color={(result || reviewMap[question.id])?.isCorrect ? 'green' : 'red'}>
               {(result || reviewMap[question.id])?.isCorrect ? 'Đúng' : 'Sai'}</Tag>}</span>}>
+          {/* To-be T18: đoạn dùng chung phía trên câu con */}
+          <GroupPassage group={groupOf(finished ? review?.groups : session?.groups, question)} range={groupRange(allItems, question.groupId)}
+            onMediaError={retryMedia} />
           <Typography.Paragraph className="attempt-question__content">{question.content}</Typography.Paragraph>
           <QuestionMediaView media={question.media} onMediaError={retryMedia} />
           {finished && isShortAnswer(question)
