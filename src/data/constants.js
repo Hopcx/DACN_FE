@@ -18,6 +18,7 @@ export const ROUTES = {
   attempts: '/admin/attempts',
   classes: '/admin/classes',
   questions: '/admin/questions',
+  questionGroups: '/admin/question-groups',   // To-be T18
   exams: '/admin/exams',
   schedules: '/admin/schedules',
   myClasses: '/student/classes',

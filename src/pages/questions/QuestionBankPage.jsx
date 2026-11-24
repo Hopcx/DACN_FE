@@ -45,6 +45,7 @@ export default function QuestionBankPage() {
   const [importErrors, setImportErrors] = useState([])
   const [importNotice, setImportNotice] = useState('')
   const [exportErrors, setExportErrors] = useState([])
+  const [exportNotice, setExportNotice] = useState('')   // To-be T18: số câu thuộc đoạn bị bỏ khi xuất Excel
   const [exporting, setExporting] = useState(false)
   // To-be T3: chương/tag tải kèm mục đã ẩn để hiển thị tên của câu đang gắn
   const [chapters, setChapters] = useState([])
@@ -200,8 +201,12 @@ export default function QuestionBankPage() {
 
   async function exportExcel() {
     if (!filters.subjectId || exporting) return
-    setExporting(true); setError(''); setExportErrors([])
-    try { await exportQuestions(filters) }
+    setExporting(true); setError(''); setExportErrors([]); setExportNotice('')
+    try {
+      const response = await exportQuestions(filters)
+      const skipped = Number(response?.headers?.['x-skipped-grouped'] || 0)
+      if (skipped > 0) setExportNotice(`Đã bỏ qua ${skipped} câu thuộc đoạn dùng chung (Excel chưa hỗ trợ đoạn).`)
+    }
     catch (failure) {
       const errors = failure.response?.data?.data?.errors
       if (failure.response?.status === 409 && Array.isArray(errors)) {
@@ -268,8 +273,9 @@ export default function QuestionBankPage() {
           { title: 'STT', key: 'stt', width: 64, align: 'center', render: (_, __, index) => rowNumber(currentPage, 10, index) },
           { title: 'Nội dung câu hỏi', dataIndex: 'content', width: 320, ellipsis: { showTitle: true },
             // To-be T14: đánh dấu câu có media
-            render: (value, item) => item.mediaCount > 0 ? <span><Tooltip title={`${item.mediaCount} ảnh/âm thanh`}>
-              <PaperClipOutlined aria-label={`${item.mediaCount} media`} className="question-media__mark" /></Tooltip> {value}</span> : value },
+            // To-be T18: câu thuộc đoạn dùng chung có nhãn tên đoạn
+            render: (value, item) => <>{item.groupId && <Tag color="blue" className="question-group-tag">Đoạn: {item.groupTitle}</Tag>}{item.mediaCount > 0 ? <span><Tooltip title={`${item.mediaCount} ảnh/âm thanh`}>
+              <PaperClipOutlined aria-label={`${item.mediaCount} media`} className="question-media__mark" /></Tooltip> {value}</span> : value}</> },
           { title: 'Môn học', dataIndex: 'subjectId', width: 160, render: (id) => label(subjects, id) },
           { title: 'Chương', dataIndex: 'chapterId', width: 160, ellipsis: { showTitle: true },
             render: (id) => (id == null ? '—' : chapterName(id) ?? `#${id}`) },
@@ -326,6 +332,7 @@ export default function QuestionBankPage() {
           { title: 'Dòng', dataIndex: 'row' }, { title: 'Cột', dataIndex: 'column' },
           { title: 'Mã lỗi', dataIndex: 'code' }, { title: 'Chi tiết', dataIndex: 'message' },
         ]} />}
+      {exportNotice && <Alert type="info" showIcon title={exportNotice} className="page-alert" closable onClose={() => setExportNotice('')} />}
       {exportErrors.length > 0 && <>
         <Table rowKey={(_, index) => index} size="small" pagination={{ pageSize: 10 }}
           dataSource={exportErrors} columns={[

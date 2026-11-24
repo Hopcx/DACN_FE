@@ -50,7 +50,8 @@ export default function DashboardLayout() {
         ...(isAdmin ? [{ to: ROUTES.users, label: 'Quản lý tài khoản', icon: <UserOutlined /> }] : []),
         ...(can(1) ? [{ to: ROUTES.exams, label: 'Quản lý bài thi', icon: <FileTextOutlined /> }] : []),
         ...(can(3) ? [{ to: ROUTES.subjects, label: 'Quản lý môn học', icon: <BookOutlined /> }] : []),
-        ...(can(2) ? [{ to: ROUTES.questions, label: 'Quản lý câu hỏi', icon: <QuestionCircleOutlined /> }] : []),
+        ...(can(2) ? [{ to: ROUTES.questions, label: 'Quản lý câu hỏi', icon: <QuestionCircleOutlined /> },
+          { to: ROUTES.questionGroups, label: 'Đoạn dùng chung', icon: <ReadOutlined /> }] : []),
         ...(can(4) ? [{ to: ROUTES.rooms, label: 'Phòng thi', icon: <BankOutlined /> }] : []),
       ] },
       ...(isAdmin ? [

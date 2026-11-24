@@ -10,6 +10,7 @@ import { getApiError, toLoadError } from '../../api/response'
 import { visibleExams } from '../../services/examList'
 import { rowNumber, showTotalLabel } from '../../services/listView'
 import { createExam, createVariant, getExams, getExamSubjects, getQuestionOptions, getVariants, updateExam, updateVariant } from '../../services/examService'
+import { withWholeGroups } from '../../services/questionGroupView'
 
 const stateOptions = [{ value: 2, label: 'Nháp' }, { value: 1, label: 'Công khai' }]
 // Smoke P1 tìm dòng bài mới theo chữ "Nháp": giữ nguyên nhãn
@@ -217,7 +218,14 @@ export default function ExamManagementPage() {
       {variantFormError && <Alert type="error" showIcon title={variantFormError} className="page-alert" />}
       <Form form={variantForm} layout="vertical" onFinish={saveVariant}>
         <Form.Item name="code" label="Mã đề" rules={[{ required: true, whitespace: true, message: 'Nhập mã đề' }]}><Input /></Form.Item>
-        <Form.Item name="questionIds" label="Chọn câu thủ công"><Select mode="multiple" showSearch={{ optionFilterProp: 'label' }} options={questions.map((q) => ({ value: q.id, label: `#${q.id} ${q.content}` }))} /></Form.Item>
+        {/* To-be T18: chọn/bỏ một câu thuộc đoạn dùng chung là chọn/bỏ cả đoạn */}
+        <Form.Item name="questionIds" label="Chọn câu thủ công"
+          // Review T18: normalize nhận giá trị mới + cũ ngay trong Form (không phụ thuộc thứ tự onChange)
+          normalize={(next, previous) => withWholeGroups(questions, previous || [], next || [])}
+          extra="Câu thuộc đoạn dùng chung luôn được chọn cùng cả đoạn; luật ngẫu nhiên cũng lấy nguyên đoạn (đếm bằng số câu của đoạn).">
+          <Select mode="multiple" showSearch={{ optionFilterProp: 'label' }}
+            options={questions.map((q) => ({ value: q.id, label: `#${q.id}${q.groupId ? ` [Đoạn: ${q.groupTitle}]` : ''} ${q.content}` }))} />
+        </Form.Item>
         <Typography.Paragraph>Đã chọn {chosenQuestionIds.length} câu thủ công + {randomRules.reduce((sum, rule) => sum + (Number(rule?.count) || 0), 0)} câu ngẫu nhiên / {selectedExam?.numberOfQuestions} câu. Tổng điểm cấu hình: {selectedExam?.maximmumMark}.</Typography.Paragraph>
         <Typography.Text>Chọn ngẫu nhiên theo mức độ; để trống mức độ để lấy từ toàn bộ môn. Tổng số câu thủ công và ngẫu nhiên phải bằng {selectedExam?.numberOfQuestions}.</Typography.Text>
         <Form.List name="randomSelections">{(fields, { add, remove }) => <>
