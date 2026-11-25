@@ -14,7 +14,7 @@ import { getAdminDashboard } from '../../services/attemptReportService'
 import { getUsers } from '../../services/accountService'
 import { getClasses } from '../../services/classService'
 import { getExams } from '../../services/examService'
-import { getQuestions } from '../../services/questionService'
+import { getQuestionsPage } from '../../services/questionService'
 import { subjectsApi } from '../../services/catalogService'
 import { getApiError } from '../../api/response'
 import { ROUTES } from '../../data/constants'
@@ -46,7 +46,8 @@ async function loadFallbackCounts() {
     students: getUsers().then((data) => rows(data).filter((item) => Number(item.levelId) === 4).length),
     teachers: getUsers().then((data) => rows(data).filter((item) => Number(item.levelId) === 3).length),
     classes: getClasses().then(total), exams: getExams().then(total),
-    questions: getQuestions().then(total), subjects: subjectsApi.list().then(total),
+    // T19 (nợ L7): chỉ cần tổng số — xin trang 1 cỡ 1, đọc totalCount (không tải cả ngân hàng)
+    questions: getQuestionsPage({}, 1, 1).then(total), subjects: subjectsApi.list().then(total),
   }
   const entries = await Promise.all(Object.entries(jobs).map(([key, job]) =>
     job.then((value) => [key, value]).catch(() => [key, null])))

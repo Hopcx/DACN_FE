@@ -228,6 +228,17 @@ try {
   await eventually(() => page.eval(`document.querySelectorAll('.attempt-palette__grid .palette-item').length === 1`), 'filter flagged')
   if ((await page.currentQuestion()) !== first) throw new Error('Lọc đánh dấu hiện sai câu.')
   pass('T8: xem lại lọc "Chỉ câu đã đánh dấu"')
+  // T19 (nợ L3): bỏ đánh dấu khi đang lọc → câu vẫn ở lại (không nhảy, không biến mất), đánh dấu lại được ngay
+  await page.click('Bỏ đánh dấu', '.attempt-question')
+  await page.waitText('Đánh dấu')
+  await eventually(() => page.eval(`document.querySelectorAll('.attempt-palette__grid .palette-item').length === 1 &&
+    !document.querySelector('.attempt-palette__grid .palette-item.is-flagged')`), 'unflagged question kept in filtered list')
+  if ((await page.currentQuestion()) !== first) throw new Error('Bỏ đánh dấu khi đang lọc làm nhảy sang câu khác.')
+  if (await page.eval(`document.body.innerText.includes('Chưa đánh dấu câu nào.')`)) throw new Error('Bỏ đánh dấu khi đang lọc làm trống danh sách.')
+  await page.click('Đánh dấu', '.attempt-question')
+  await page.waitText('Bỏ đánh dấu')
+  await eventually(() => page.eval(`!!document.querySelector('.attempt-palette__grid .palette-item.is-flagged')`), 're-flag in filtered list')
+  pass('T19: bỏ đánh dấu khi đang lọc giữ nguyên câu đang xem, đánh dấu lại được')
   pass('Từng câu: câu 2 → Sai, nộp, kết quả 1/2')
 
   // ---- Lịch sử + Làm lại bộ này

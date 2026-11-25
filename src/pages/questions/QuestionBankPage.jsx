@@ -10,7 +10,7 @@ import StatusTag from '../../components/ui/StatusTag'
 import QuestionMediaPanel from './QuestionMediaPanel'
 import { LoadError, TableEmpty } from '../../components/ui/PageState'
 import { getApiError, toLoadError } from '../../api/response'
-import { createQuestion, createTag, deleteQuestion, downloadQuestionTemplate, getChapters, getQuestionLevels, getQuestions,
+import { createQuestion, createTag, deleteQuestion, downloadQuestionTemplate, getChapters, getQuestionLevels, getQuestionsPage,
   getQuestionSubjects, getQuestionTypes, getTags, importQuestions, updateQuestion, exportQuestions } from '../../services/questionService'
 import { chapterProblem, duplicateTagId, EXPLANATION_MAX, MAX_TAGS, metadataOptions, normalizeTagName, questionBody,
   restoreBody, tagKey, tagProblem, tagSummary } from '../../services/questionMetadata'
@@ -23,12 +23,16 @@ import { clampPage, rowNumber, showTotalLabel, statusView } from '../../services
 const defaultAnswers = () => [{ content: '', isCorrect: false }, { content: '', isCorrect: false }]
 // Màu tag mức độ theo id (tên mức độ là dữ liệu)
 const LEVEL_TONES = { 1: 'success', 2: 'info', 3: 'warning', 4: 'purple' }
+// T19 (nợ L7): mỗi trang lấy từ BE đúng 10 câu
+const PAGE_SIZE = 10
 
 export default function QuestionBankPage() {
   const user = useSelector((state) => state.auth.user)
   const allowed = String(user?.levelId) === '1' || (user?.permissions || []).some((id) => String(id) === '2')
   const [form] = Form.useForm()
   const [questions, setQuestions] = useState([])
+  // T19 (nợ L7): phân trang phía server — chỉ giữ một trang và tổng số câu khớp bộ lọc
+  const [total, setTotal] = useState(0)
   const [types, setTypes] = useState([])
   const [levels, setLevels] = useState([])
   const [subjects, setSubjects] = useState([])
@@ -63,14 +67,18 @@ export default function QuestionBankPage() {
     const requestId = ++requestRef.current
     setLoading(true); setLoadError(null)
     try {
-      const items = await getQuestions(filters)
-      if (requestId === requestRef.current) setQuestions(items)
+      const data = await getQuestionsPage(filters, page, PAGE_SIZE)
+      if (requestId !== requestRef.current) return
+      // Trang hiện tại không còn (vd. vừa ẩn câu cuối của trang cuối): lùi về trang cuối còn dữ liệu
+      const last = clampPage(page, PAGE_SIZE, data.totalCount)
+      if (last !== page) { setPage(last); return }
+      setQuestions(data.items); setTotal(data.totalCount)
     } catch (failure) {
       if (requestId === requestRef.current) setLoadError(toLoadError(failure))
     } finally {
       if (requestId === requestRef.current) setLoading(false)
     }
-  }, [allowed, filters])
+  }, [allowed, filters, page])
 
   useEffect(() => { load() }, [load])
   useEffect(() => {
@@ -219,7 +227,7 @@ export default function QuestionBankPage() {
   const label = (items, id) => items.find((x) => x.id === id)?.name || id
   const choices = (items) => items.filter((x) => x.status === true || x.status === 1 || x.status == null)
     .map((x) => ({ value: x.id, label: x.name }))
-  const currentPage = clampPage(page, 10, questions.length)
+  const currentPage = page
   const filtered = Boolean(filters.textSearch || filters.subjectId || filters.questionTypeId || filters.questionLevelId ||
     filters.chapterId || filters.tagIds?.length)
   const chaptersOf = (subjectId) => chapters.filter((x) => x.subjectId === subjectId)
@@ -267,10 +275,10 @@ export default function QuestionBankPage() {
         </div>
       </div>
       <Table rowKey="id" size="middle" loading={loading} dataSource={questions} scroll={{ x: 1440 }}
-        pagination={{ current: currentPage, pageSize: 10, showSizeChanger: false, onChange: setPage, showTotal: showTotalLabel('câu hỏi') }}
+        pagination={{ current: currentPage, pageSize: PAGE_SIZE, total, showSizeChanger: false, onChange: setPage, showTotal: showTotalLabel('câu hỏi') }}
         locale={{ emptyText: <TableEmpty error={Boolean(loadError)} errorLabel="Không tải được dữ liệu." filtered={filtered}
           emptyLabel="Chưa có câu hỏi" filteredLabel="Không có câu hỏi khớp bộ lọc" /> }} columns={[
-          { title: 'STT', key: 'stt', width: 64, align: 'center', render: (_, __, index) => rowNumber(currentPage, 10, index) },
+          { title: 'STT', key: 'stt', width: 64, align: 'center', render: (_, __, index) => rowNumber(currentPage, PAGE_SIZE, index) },
           { title: 'Nội dung câu hỏi', dataIndex: 'content', width: 320, ellipsis: { showTitle: true },
             // To-be T14: đánh dấu câu có media
             // To-be T18: câu thuộc đoạn dùng chung có nhãn tên đoạn
@@ -336,8 +344,9 @@ export default function QuestionBankPage() {
       {exportErrors.length > 0 && <>
         <Table rowKey={(_, index) => index} size="small" pagination={{ pageSize: 10 }}
           dataSource={exportErrors} columns={[
-            { title: 'Câu hỏi', dataIndex: 'questionId', render: (id) => {
-              const content = questions.find((item) => item.id === id)?.content
+            { title: 'Câu hỏi', dataIndex: 'questionId', render: (id, issue) => {
+              // T19 (review N2): ngân hàng phân trang — lấy nội dung BE trả kèm lỗi, dự phòng tra trong trang đang xem
+              const content = issue.content || questions.find((item) => item.id === id)?.content
               return content ? `#${id} ${content.length > 80 ? `${content.slice(0, 80)}…` : content}` : `#${id}`
             } },
             { title: 'Mã lỗi', dataIndex: 'code' }, { title: 'Chi tiết', dataIndex: 'message' },

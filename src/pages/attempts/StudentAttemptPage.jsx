@@ -21,7 +21,7 @@ import { getAttempt, getAttemptReview, getVisibilityCount, recordVisibilityHidde
 import { getMySchedules } from '../../services/scheduleService'
 import { formatClock, formatVnMoment, formatVnSeconds } from '../../utils/duration'
 import useReviewFlags from '../../hooks/useReviewFlags'
-import { visibleQuestions } from '../../services/reviewFlags'
+import { keptAfterToggle, visibleQuestions } from '../../services/reviewFlags'
 
 // To-be T16: câu điền ngắn giữ chuỗi bài làm (text); loại khác giữ mảng Id đáp án
 const toDraft = (answers = []) => Object.fromEntries(answers.map((x) => [x.questionId, draftValue(x)]))
@@ -54,6 +54,8 @@ export default function StudentAttemptPage() {
   // To-be T8: đánh dấu câu lưu ở server (giữ qua tải lại/thiết bị, cả lúc xem lại); đánh dấu cũ trong sessionStorage được đẩy lên một lần
   const [flags, toggleFlag] = useReviewFlags('exam', id, { legacyKey: `attempt-flags:${id}`, onError: setError })
   const [onlyFlagged, setOnlyFlagged] = useState(false)
+  // T19 (nợ L3): câu vừa bỏ đánh dấu khi đang lọc — vẫn hiện tới khi bật/tắt lại bộ lọc
+  const [kept, setKept] = useState(() => new Set())
   const saveRef = useRef(null)
 
   const load = useCallback(async () => {
@@ -160,7 +162,7 @@ export default function StudentAttemptPage() {
   const loadReview = async () => {
     if (!attempt?.result || busy) return
     setBusy(true); setError('')
-    try { setReview(await getAttemptReview(id)); setReviewIndex(0) }
+    try { setReview(await getAttemptReview(id)); setReviewIndex(0); setKept(new Set()) }
     catch (failure) { setReview(null); setError(reviewErrorMessage(failure)) }
     finally { setBusy(false) }
   }
@@ -170,14 +172,15 @@ export default function StudentAttemptPage() {
   useEffect(() => {
     if (!wantsReview || autoReviewed.current || !attempt?.result) return
     autoReviewed.current = true
-    getAttemptReview(id).then((data) => { setReview(data); setReviewIndex(0) })
+    getAttemptReview(id).then((data) => { setReview(data); setReviewIndex(0); setKept(new Set()) })
       .catch((failure) => setError(reviewErrorMessage(failure)))
   }, [wantsReview, attempt?.result, id])
 
   const questions = attempt?.questions || []
   // To-be T8: xem lại có thể chỉ hiện câu đã đánh dấu; số câu giữ theo thứ tự gốc
   const reviewAll = review?.questions || []
-  const reviewQuestions = visibleQuestions(reviewAll, flags, onlyFlagged)
+  const reviewQuestions = visibleQuestions(reviewAll, flags, onlyFlagged, kept)
+  const reviewFlagToggle = (questionId) => { setKept((old) => keptAfterToggle(old, flags, questionId, onlyFlagged)); toggleFlag(questionId) }
   const reviewCurrent = Math.min(reviewIndex, Math.max(0, reviewQuestions.length - 1))
   const reviewItem = reviewQuestions[reviewCurrent]
   const reviewQuestion = reviewItem?.question
@@ -330,7 +333,7 @@ export default function StudentAttemptPage() {
             </div>
             <label className="review-flag-filter">
               <Switch size="small" checked={onlyFlagged} aria-label="Chỉ câu đã đánh dấu"
-                onChange={(value) => { setOnlyFlagged(value); setReviewIndex(0) }} /> Chỉ câu đã đánh dấu ({flags.size})
+                onChange={(value) => { setOnlyFlagged(value); setKept(new Set()); setReviewIndex(0) }} /> Chỉ câu đã đánh dấu ({flags.size})
             </label>
             <div className="attempt-palette__grid">{reviewQuestions.map(({ question: item, number }, index) => {
               const answered = reviewQuestionState(item) === 'answered'
@@ -343,7 +346,7 @@ export default function StudentAttemptPage() {
           {reviewQuestion && <Card className="attempt-question review-question"
             title={<span>Câu <strong className="attempt-question__no">{reviewItem.number}/{reviewAll.length}</strong></span>}
             extra={<Button type="text" icon={flags.has(reviewQuestion.id) ? <FlagFilled className="legend-flag" /> : <FlagOutlined />}
-              onClick={() => toggleFlag(reviewQuestion.id)}>{flags.has(reviewQuestion.id) ? 'Bỏ đánh dấu' : 'Đánh dấu'}</Button>}>
+              onClick={() => reviewFlagToggle(reviewQuestion.id)}>{flags.has(reviewQuestion.id) ? 'Bỏ đánh dấu' : 'Đánh dấu'}</Button>}>
             <GroupPassage group={groupOf(review.groups, reviewQuestion)} range={groupRange(reviewAll, reviewQuestion.groupId)} onMediaError={retryReviewMedia} />
             <Typography.Paragraph className="attempt-question__content">{reviewQuestion.content}</Typography.Paragraph>
             <QuestionMediaView media={reviewQuestion.media} onMediaError={retryReviewMedia} />
