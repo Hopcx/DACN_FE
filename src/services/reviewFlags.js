@@ -15,10 +15,25 @@ export function toggled(flags, questionId) {
   return next
 }
 
-/** Danh sách câu hiển thị ở xem lại: kèm số thứ tự gốc; onlyFlagged → chỉ câu đã đánh dấu. */
-export function visibleQuestions(questions, flags, onlyFlagged) {
+/**
+ * Danh sách câu hiển thị ở xem lại: kèm số thứ tự gốc; onlyFlagged → chỉ câu đã đánh dấu,
+ * cộng các câu trong `kept` (vừa bỏ đánh dấu khi đang lọc — T19, nợ L3).
+ */
+export function visibleQuestions(questions, flags, onlyFlagged, kept) {
   const numbered = (questions || []).map((question, index) => ({ question, number: index + 1 }))
-  return onlyFlagged ? numbered.filter((item) => flags.has(item.question.id)) : numbered
+  return onlyFlagged ? numbered.filter((item) => flags.has(item.question.id) || Boolean(kept?.has(item.question.id))) : numbered
+}
+
+/**
+ * T19 (nợ L3): bỏ đánh dấu câu khi đang lọc "Chỉ câu đã đánh dấu" thì giữ câu đó trong danh sách lọc
+ * (không nhảy sang câu khác, không lệch số thứ tự) cho tới khi bật/tắt lại bộ lọc. Trả tập mới, không sửa tập cũ.
+ */
+export function keptAfterToggle(kept, flags, questionId, filtering) {
+  const current = kept || new Set()
+  if (!filtering || !flags.has(questionId)) return current
+  const next = new Set(current)
+  next.add(questionId)
+  return next
 }
 
 /** Tập đánh dấu từ server + các ý định người dùng chưa được server xác nhận (true = đánh dấu, false = bỏ). */
