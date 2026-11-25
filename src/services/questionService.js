@@ -3,6 +3,9 @@ import { readPayload } from '../api/response'
 import { downloadFile } from '../api/download'
 
 export const getQuestions = async (params) => readPayload(await axiosClient.get('/questions', { params, paramsSerializer: { indexes: null } }))
+// T19 (nợ L7): một trang { page, pageSize, totalCount, items } theo cùng bộ lọc (BE phân trang khi có page)
+export const getQuestionsPage = async (params, page, pageSize) =>
+  readPayload(await axiosClient.get('/questions', { params: { ...params, page, pageSize }, paramsSerializer: { indexes: null } }))
 export const createQuestion = async (body) => readPayload(await axiosClient.post('/questions', body))
 export const updateQuestion = async (id, body) => readPayload(await axiosClient.put(`/questions/${id}`, body))
 export const deleteQuestion = async (id) => readPayload(await axiosClient.delete(`/questions/${id}`))

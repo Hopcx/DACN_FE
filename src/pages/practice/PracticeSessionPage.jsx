@@ -9,7 +9,7 @@ import { KIND_LABELS, MODE_LABELS, paletteState, practiceErrorMessage, remaining
   toPayload } from '../../services/practiceView'
 import { formatClock } from '../../utils/duration'
 import useReviewFlags from '../../hooks/useReviewFlags'
-import { visibleQuestions } from '../../services/reviewFlags'
+import { keptAfterToggle, visibleQuestions } from '../../services/reviewFlags'
 import QuestionMediaView from '../../components/media/QuestionMediaView'
 import { createMediaRetry, mergeMedia } from '../../services/mediaView'
 import { hasAnswer, isShortAnswer } from '../../services/shortAnswerView'
@@ -57,6 +57,8 @@ export default function PracticeSessionPage() {
   // To-be T8: đánh dấu câu lưu ở server (khi làm bài và khi xem lại); xem lại có thể chỉ hiện câu đã đánh dấu
   const [flags, toggleFlag] = useReviewFlags('practice', id, { onError: setError })
   const [onlyFlagged, setOnlyFlagged] = useState(false)
+  // T19 (nợ L3): câu vừa bỏ đánh dấu khi đang lọc — vẫn hiện tới khi bật/tắt lại bộ lọc
+  const [kept, setKept] = useState(() => new Set())
   const saveRef = useRef(null)
   // To-be T9: đồng hồ Thi thử theo máy chủ (giờ máy chủ lúc tải + thời gian đã trôi trên máy học viên)
   const [clock, setClock] = useState(null)
@@ -83,7 +85,7 @@ export default function PracticeSessionPage() {
   }, [id])
   const retryMedia = useMemo(() => createMediaRetry(refreshMedia), [refreshMedia])
   // Đổi phiên (vd. sau "Làm lại bộ này"): xóa trạng thái phiên cũ trước khi tải
-  useEffect(() => { setCurrent(0); setSession(null); setReview(null); setChoices({}); setDirty(false); setOnlyFlagged(false); load() }, [load])
+  useEffect(() => { setCurrent(0); setSession(null); setReview(null); setChoices({}); setDirty(false); setOnlyFlagged(false); setKept(new Set()); load() }, [load])
   // Rời trang/tải lại khi còn thay đổi chưa lưu: trình duyệt hỏi xác nhận
   useEffect(() => {
     if (!dirty) return undefined
@@ -212,7 +214,8 @@ export default function PracticeSessionPage() {
   const finished = session?.state === 'finished'
   const allItems = finished ? review?.questions || [] : session?.questions || []
   // Danh sách hiển thị (kèm số gốc); lọc "Chỉ câu đã đánh dấu" chỉ áp khi xem lại
-  const items = visibleQuestions(allItems, flags, finished && onlyFlagged)
+  const items = visibleQuestions(allItems, flags, finished && onlyFlagged, kept)
+  const flagToggle = (questionId) => { setKept((old) => keptAfterToggle(old, flags, questionId, finished && onlyFlagged)); toggleFlag(questionId) }
   const index = Math.min(current, Math.max(0, items.length - 1))
   const checkedMap = toCheckedMap(session?.checked)
   const reviewMap = Object.fromEntries((review?.questions || []).map((x) => [x.id, { isCorrect: x.isCorrect }]))
@@ -262,7 +265,7 @@ export default function PracticeSessionPage() {
           </div>
           {finished && <label className="review-flag-filter">
             <Switch size="small" checked={onlyFlagged} aria-label="Chỉ câu đã đánh dấu"
-              onChange={(value) => { setOnlyFlagged(value); setCurrent(0) }} /> Chỉ câu đã đánh dấu ({flags.size})
+              onChange={(value) => { setOnlyFlagged(value); setKept(new Set()); setCurrent(0) }} /> Chỉ câu đã đánh dấu ({flags.size})
           </label>}
           <div className="attempt-palette__grid">{items.map(({ question: item, number: no }, i) => {
             const state = finished
@@ -279,7 +282,7 @@ export default function PracticeSessionPage() {
 
         {question && <Card className={`attempt-question ${finished || result ? 'review-question' : ''}`}
           extra={<Button type="text" icon={flags.has(question.id) ? <FlagFilled className="legend-flag" /> : <FlagOutlined />}
-            onClick={() => toggleFlag(question.id)}>{flags.has(question.id) ? 'Bỏ đánh dấu' : 'Đánh dấu'}</Button>}
+            onClick={() => flagToggle(question.id)}>{flags.has(question.id) ? 'Bỏ đánh dấu' : 'Đánh dấu'}</Button>}
           title={<span>Câu <strong className="attempt-question__no">{number}/{allItems.length}</strong>
             {question.questionTypeId === 3 && <Tag className="ml-2" color="blue">Chọn nhiều đáp án</Tag>}
             {isShortAnswer(question) && <Tag className="ml-2" color="purple">Điền ngắn</Tag>}
