@@ -1,0 +1,3 @@
+# T20: file chạy trong Linux (Docker) phải giữ LF
+Dockerfile text eol=lf
+deploy/Caddyfile text eol=lf
