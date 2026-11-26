@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.git/
+.bangiao/
+.claude/
+.certs/
+.env
+.env.*
+*.log
+*.pfx
+tests/
+docs/
