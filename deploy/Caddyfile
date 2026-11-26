@@ -1,0 +1,41 @@
+# T20 (QT20-2): một origin duy nhất cho FE và API.
+#   https://{$SITE_HOST}/web/*  → API (http://api:8080, mạng Docker nội bộ)
+#   mọi đường dẫn khác          → file tĩnh của FE, fallback index.html cho SPA (KHÔNG áp cho /web/*)
+# SITE_HOST = tên miền thật (Caddy tự lấy và gia hạn chứng chỉ Let's Encrypt) hoặc "localhost" khi diễn tập (CA nội bộ của Caddy).
+{
+	email {$ACME_EMAIL}
+}
+
+{$SITE_HOST} {
+	encode zstd gzip
+
+	header {
+		# HSTS: khi diễn tập trên localhost đặt HSTS_MAX_AGE=0 để trình duyệt không ghi nhớ
+		Strict-Transport-Security "max-age={$HSTS_MAX_AGE:31536000}"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		-Server
+	}
+
+	handle /web/* {
+		# Caddy ghi đè X-Forwarded-For bằng IP thật của client (không tin header client gửi lên);
+		# API chỉ đọc header này khi request đến từ mạng Docker (Proxy:KnownNetworks).
+		reverse_proxy api:8080
+	}
+
+	# File build có hash trong tên: cache lâu dài; file không tồn tại → 404 thật (không trả index.html kèm immutable)
+	handle /assets/* {
+		root * /srv
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# Mọi trang khác (kể cả deep link SPA → index.html): luôn hỏi lại máy chủ, để sau deploy không giữ index.html cũ trỏ tới asset đã xóa
+	handle {
+		root * /srv
+		header Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}
